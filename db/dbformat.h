@@ -60,6 +60,9 @@ enum ValueType { kTypeDeletion = 0x0, kTypeValue = 0x1 };
 // ValueType, not the lowest).
 static const ValueType kValueTypeForSeek = kTypeValue;
 
+// LevelDB 通过维护一个全局的自增的 SequenceNumber 来实现快照机制，
+// 每次写入数据库时 SequenceNumber 都会加 1，SequenceNumber 会被存储在那个键值对的 InternalKey 中
+// 我们可以通过查询所有 SequenceNumber 小于给定值的键值对来计算出整个数据库在某个 SequenceNumber 时的快照
 typedef uint64_t SequenceNumber;
 
 // We leave eight bits empty at the bottom so a type and sequence#
@@ -180,6 +183,7 @@ inline bool ParseInternalKey(const Slice& internal_key,
   return (c <= static_cast<uint8_t>(kTypeValue));
 }
 
+// LookupKey 是进行查询时需要的辅助类，由 user key 和 sequence 组成
 // A helper class useful for DBImpl::Get()
 class LookupKey {
  public:
@@ -192,6 +196,7 @@ class LookupKey {
 
   ~LookupKey();
 
+  // 创建一个适合在 MemTable 中进行查询的 key, 格式为 
   // Return a key suitable for lookup in a MemTable.
   Slice memtable_key() const { return Slice(start_, end_ - start_); }
 

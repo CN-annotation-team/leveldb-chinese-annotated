@@ -17,6 +17,7 @@
 
 namespace leveldb {
 
+// DataBlock 尾部的 4 个字节以 fixed_uint32 格式存储重启点的个数 NumRestarts
 inline uint32_t Block::NumRestarts() const {
   assert(size_ >= sizeof(uint32_t));
   return DecodeFixed32(data_ + size_ - sizeof(uint32_t));
@@ -52,6 +53,15 @@ Block::~Block() {
 //
 // If any errors are detected, returns nullptr.  Otherwise, returns a
 // pointer to the key delta (just past the three decoded values).
+// 解码从指针 p 开始的下一个键值对, 将 shared non_shared value_length 值填入相应指针中
+// 如果遇到任何问题则会返回 nullptr, 如果成功返回指向 key_delta 的指针
+//
+// 顺便复习一下 entry 的结构 
+// - shared_bytes: varint32 共享前缀长度，对于重启点来说 shared_bytes 始终为 0
+// - non_shared_bytes: varint32 前缀之后 key 的长度
+// - value_length: varint32 value 的长度
+// - key_delta: char[non_shared_bytes] key 在复用前缀之后的部分
+// - value: char[value_length] 
 static inline const char* DecodeEntry(const char* p, const char* limit,
                                       uint32_t* shared, uint32_t* non_shared,
                                       uint32_t* value_length) {
@@ -77,15 +87,16 @@ static inline const char* DecodeEntry(const char* p, const char* limit,
 class Block::Iter : public Iterator {
  private:
   const Comparator* const comparator_;
-  const char* const data_;       // underlying block contents
-  uint32_t const restarts_;      // Offset of restart array (list of fixed32)
-  uint32_t const num_restarts_;  // Number of uint32_t entries in restart array
+  const char* const data_;       // underlying block contents 下层的 block 数据
+  uint32_t const restarts_;      // Offset of restart array (list of fixed32) 重启点偏移量，格式为 fixedInt32 列表
+  uint32_t const num_restarts_;  // Number of uint32_t entries in restart array 重启点个数
 
   // current_ is offset in data_ of current entry.  >= restarts_ if !Valid
+  // current_ 是当前 entry 在 data block 中的偏移量
   uint32_t current_;
-  uint32_t restart_index_;  // Index of restart block in which current_ falls
-  std::string key_;
-  Slice value_;
+  uint32_t restart_index_;  // Index of restart block in which current_ falls 当前 entry 上一个重启点在 restarts 数组中的下标
+  std::string key_; // 当前 entry 的 key
+  Slice value_; // 当前 entry 的 value，value_ 是指向 data_ 的指针，数据实际上存储在 data_ 中
   Status status_;
 
   inline int Compare(const Slice& a, const Slice& b) const {
@@ -93,10 +104,13 @@ class Block::Iter : public Iterator {
   }
 
   // Return the offset in data_ just past the end of the current entry.
+  // 计算下一个键值对起点在 data_ 中的 offset
+  // 计算原理是从当前键值对的 value_ 指针向后跳过 value_.size(), 所以需要解析完当前键值对才能使用
   inline uint32_t NextEntryOffset() const {
     return (value_.data() + value_.size()) - data_;
   }
 
+  // 获得 restarts[index] 的偏移量
   uint32_t GetRestartPoint(uint32_t index) {
     assert(index < num_restarts_);
     return DecodeFixed32(data_ + restarts_ + index * sizeof(uint32_t));
@@ -161,6 +175,8 @@ class Block::Iter : public Iterator {
     } while (ParseNextKey() && NextEntryOffset() < original);
   }
 
+  // 在 DataBlock 中查找键值对的核心方法
+  // 远离是在 restarts 数组中通过二分查找找到 target 前一个重启点，然后顺序向后搜索找到 target
   void Seek(const Slice& target) override {
     // Binary search in restart array to find the last restart point
     // with a key < target
@@ -172,11 +188,14 @@ class Block::Iter : public Iterator {
       // If we're already scanning, use the current position as a starting
       // point. This is beneficial if the key we're seeking to is ahead of the
       // current position.
+      // 使用 current_ 作为搜索的起始点
       current_key_compare = Compare(key_, target);
       if (current_key_compare < 0) {
         // key_ is smaller than target
+        // key_ < target, 搜索当前 restart 右侧
         left = restart_index_;
       } else if (current_key_compare > 0) {
+        // key_ > target, 搜索当前 restart 左侧
         right = restart_index_;
       } else {
         // We're seeking to the key we're already at.
@@ -247,6 +266,7 @@ class Block::Iter : public Iterator {
     value_.clear();
   }
 
+  // 解析下一个键值对的 key, 并将 current_ 指向下一个键值对的起点
   bool ParseNextKey() {
     current_ = NextEntryOffset();
     const char* p = data_ + current_;
@@ -260,6 +280,7 @@ class Block::Iter : public Iterator {
 
     // Decode next entry
     uint32_t shared, non_shared, value_length;
+    // DecodeEntry 解析 shared non_shared value_length，并返回指向 key delta 的指针
     p = DecodeEntry(p, limit, &shared, &non_shared, &value_length);
     if (p == nullptr || key_.size() < shared) {
       CorruptionError();

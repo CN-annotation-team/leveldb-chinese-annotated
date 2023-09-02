@@ -218,6 +218,7 @@ class LEVELDB_EXPORT Env {
   virtual void SleepForMicroseconds(int micros) = 0;
 };
 
+// SequentialFile 是可顺序读的文件抽象
 // A file abstraction for reading sequentially through a file
 class LEVELDB_EXPORT SequentialFile {
  public:
@@ -236,6 +237,10 @@ class LEVELDB_EXPORT SequentialFile {
   // If an error was encountered, returns a non-OK status.
   //
   // REQUIRES: External synchronization
+  // 从文件中读取 n 个字节，读取的结果存储在 result 中
+  // scratch 是读取用的缓冲区，result 可能指向 scratch 中的数据，所以 result 使用期间不要销毁 scratch
+  // 如果读取遇到问题将会返回表示错误的 Status
+  // 注意：需要调用方提供锁
   virtual Status Read(size_t n, Slice* result, char* scratch) = 0;
 
   // Skip "n" bytes from the file. This is guaranteed to be no
@@ -245,6 +250,8 @@ class LEVELDB_EXPORT SequentialFile {
   // file, and Skip will return OK.
   //
   // REQUIRES: External synchronization
+  // 跳过 n 个字节，如果目标位置超出了文件大小则会停在文件尾并返回 OK
+  // 注意：需要调用方提供锁
   virtual Status Skip(uint64_t n) = 0;
 };
 
@@ -274,6 +281,8 @@ class LEVELDB_EXPORT RandomAccessFile {
 // A file abstraction for sequential writing.  The implementation
 // must provide buffering since callers may append small fragments
 // at a time to the file.
+// 支持顺序写入的文件抽象
+// 由于调用方可能写入很多小块数据，所以 WritableFile 实现必须带有缓冲区
 class LEVELDB_EXPORT WritableFile {
  public:
   WritableFile() = default;

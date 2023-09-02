@@ -27,6 +27,17 @@
 //
 // ... prev vs. next pointer ordering ...
 
+// 线程安全
+// -------
+// 
+// 写入需要锁等外部机制来保证线程安全
+// 进行读取时需要保证跳表不被销毁
+// 除此之外，读取不需要任何锁或同步机制
+//
+// 不变量：
+// (1) 在跳表销毁之前所有的节点都不会被删除。
+// (2) 节点的内容在加入跳表后就不会被改变
+
 #include <atomic>
 #include <cassert>
 #include <cstdlib>
@@ -45,6 +56,8 @@ class SkipList {
   // Create a new SkipList object that will use "cmp" for comparing keys,
   // and will allocate memory using "*arena".  Objects allocated in the arena
   // must remain allocated for the lifetime of the skiplist object.
+  // 在 arena 上创建一个新的跳表，cmp 用于指定 key 的排序
+  // 在 arena 中分配的对象必须在跳表对象的生命周期内保持存在
   explicit SkipList(Comparator cmp, Arena* arena);
 
   SkipList(const SkipList&) = delete;
@@ -52,9 +65,12 @@ class SkipList {
 
   // Insert key into the list.
   // REQUIRES: nothing that compares equal to key is currently in the list.
+  // 将 key 插入到跳表中
+  // 调用时需要保证跳表中不存在相同 key
   void Insert(const Key& key);
 
   // Returns true iff an entry that compares equal to key is in the list.
+  // 判断跳表中是否存在某个 key
   bool Contains(const Key& key) const;
 
   // Iteration over the contents of a skip list
@@ -62,32 +78,45 @@ class SkipList {
    public:
     // Initialize an iterator over the specified list.
     // The returned iterator is not valid.
+    // 初始化一个迭代器
+    // 返回的迭代器需要先 SeekToFirst 或 SeekToLast 之后才可用
     explicit Iterator(const SkipList* list);
 
     // Returns true iff the iterator is positioned at a valid node.
+    // 判断迭代器是否指向了可用的节点
     bool Valid() const;
 
     // Returns the key at the current position.
     // REQUIRES: Valid()
+    // 返回当前的 key
+    // 需要迭代器可用
     const Key& key() const;
 
     // Advances to the next position.
     // REQUIRES: Valid()
+    // 迭代器指向下一个 key
+    // 需要迭代器可用
     void Next();
 
     // Advances to the previous position.
     // REQUIRES: Valid()
+    // 迭代器指向上一个 key
+    // 需要迭代器可用
     void Prev();
 
     // Advance to the first entry with a key >= target
+    // 迭代器指向第一个 key >= target 的节点
+    // 需要迭代器可用
     void Seek(const Key& target);
 
     // Position at the first entry in list.
     // Final state of iterator is Valid() iff list is not empty.
+    // 指向跳表第一个节点
     void SeekToFirst();
 
     // Position at the last entry in list.
     // Final state of iterator is Valid() iff list is not empty.
+    // 指向跳表最后一个节点
     void SeekToLast();
 
    private:
@@ -115,17 +144,32 @@ class SkipList {
   //
   // If prev is non-null, fills prev[level] with pointer to previous
   // node at "level" for every level in [0..max_height_-1].
+  // 寻找并返回大于等于 key 的第一个节点 x, 并将 x 在各层的前驱节点存储在 prev 数组中
+  // 
+  // 示例：
+  //  Lv2: 1 ---------------------------> 13
+  //                           
+  //  Lv1: 1 ------> 5 ------> 9 -------> 13
+  //
+  //  Lv0: 1 -> 3 -> 5 -> 7 -> 9 -> 11 -> 13
+  //
+  // 在上图的跳表中 FindGreaterOrEqual(8) 返回节点 9, prev 为节点 9 在各层的前驱节点 [1, 5, 7]
   Node* FindGreaterOrEqual(const Key& key, Node** prev) const;
 
   // Return the latest node with a key < key.
   // Return head_ if there is no such node.
+  // 返回小于 key 的最后一个节点
+  // 如果不存在则返回 head
   Node* FindLessThan(const Key& key) const;
 
   // Return the last node in the list.
   // Return head_ if list is empty.
+  // 返回跳表中最后一个节点
+  // 如果不存在则返回 head
   Node* FindLast() const;
 
   // Immutable after construction
+  // 跳表创建之后，compare_ 和 arena_ 就不能再改变  
   Comparator const compare_;
   Arena* const arena_;  // Arena used for allocations of nodes
 
@@ -133,6 +177,8 @@ class SkipList {
 
   // Modified only by Insert().  Read racily by readers, but stale
   // values are ok.
+  // 只有 Insert 会修改最大高度
+  // 读取线程会进入 race condition, 但仍能正常工作
   std::atomic<int> max_height_;  // Height of the entire list
 
   // Read/written only by Insert().
@@ -249,12 +295,23 @@ int SkipList<Key, Comparator>::RandomHeight() {
   return height;
 }
 
+// 判断 key 是否大于 n->key
 template <typename Key, class Comparator>
 bool SkipList<Key, Comparator>::KeyIsAfterNode(const Key& key, Node* n) const {
   // null n is considered infinite
   return (n != nullptr) && (compare_(n->key, key) < 0);
 }
 
+// 寻找并返回大于等于 key 的第一个节点 x, 并将 x 在各层的前驱节点存储在 prev 数组中
+// 
+// 示例：
+//  Lv2: 1 ---------------------------> 13
+//                           
+//  Lv1: 1 ------> 5 ------> 9 -------> 13
+//
+//  Lv0: 1 -> 3 -> 5 -> 7 -> 9 -> 11 -> 13
+//
+// 在上图的跳表中 FindGreaterOrEqual(8) 返回节点 9, prev 为节点 9 在各层的前驱节点 [1, 5, 7]
 template <typename Key, class Comparator>
 typename SkipList<Key, Comparator>::Node*
 SkipList<Key, Comparator>::FindGreaterOrEqual(const Key& key,
@@ -265,19 +322,23 @@ SkipList<Key, Comparator>::FindGreaterOrEqual(const Key& key,
     Node* next = x->Next(level);
     if (KeyIsAfterNode(key, next)) {
       // Keep searching in this list
+      // 在当前层级中继续寻找
       x = next;
     } else {
-      if (prev != nullptr) prev[level] = x;
+      // next > key, 准备去下一个层级寻找
+      if (prev != nullptr) prev[level] = x; // 将当前层级的前驱节点存在 prev 中
       if (level == 0) {
         return next;
       } else {
         // Switch to next list
+        // 去下一个层级
         level--;
       }
     }
   }
 }
 
+// 返回小于 key 的最后一个节点
 template <typename Key, class Comparator>
 typename SkipList<Key, Comparator>::Node*
 SkipList<Key, Comparator>::FindLessThan(const Key& key) const {
@@ -299,6 +360,7 @@ SkipList<Key, Comparator>::FindLessThan(const Key& key) const {
   }
 }
 
+// 找到跳表的最后一个节点
 template <typename Key, class Comparator>
 typename SkipList<Key, Comparator>::Node* SkipList<Key, Comparator>::FindLast()
     const {
@@ -319,6 +381,7 @@ typename SkipList<Key, Comparator>::Node* SkipList<Key, Comparator>::FindLast()
   }
 }
 
+// 在 arena 上创建一个新的跳表，cmp 用于指定 key 的排序
 template <typename Key, class Comparator>
 SkipList<Key, Comparator>::SkipList(Comparator cmp, Arena* arena)
     : compare_(cmp),
@@ -335,14 +398,19 @@ template <typename Key, class Comparator>
 void SkipList<Key, Comparator>::Insert(const Key& key) {
   // TODO(opt): We can use a barrier-free variant of FindGreaterOrEqual()
   // here since Insert() is externally synchronized.
+  // TODO: 因为 Insert() 函数是有锁的情况下被调用的，所以 FindGreaterOrEqual 可以使用一个无锁版本
+  // FindGreaterOrEqual 寻找并返回大于等于 key 的第一个节点 x, 并将 x 在各层的前驱节点存储在 prev 数组中
+  //  使用 FindGreaterOrEqual 返回的 prev 数组作为各层插入时的前驱节点
   Node* prev[kMaxHeight];
   Node* x = FindGreaterOrEqual(key, prev);
 
   // Our data structure does not allow duplicate insertion
+  // 我们的数据结构不允许重复插入
   assert(x == nullptr || !Equal(key, x->key));
 
   int height = RandomHeight();
   if (height > GetMaxHeight()) {
+    // 如果新节点的高度超过了原来的最大高度，新增的层数以 head 作为前驱
     for (int i = GetMaxHeight(); i < height; i++) {
       prev[i] = head_;
     }
@@ -353,6 +421,12 @@ void SkipList<Key, Comparator>::Insert(const Key& key) {
     // the loop below.  In the former case the reader will
     // immediately drop to the next level since nullptr sorts after all
     // keys.  In the latter case the reader will use the new node.
+    // 修改 max_height
+    // 在没有同步机制保护的情况下修改 max_height_ 是安全的
+    // 其它线程看到新的 height 之后，可能看到新层级上的指针也可能看不到新层级的上指针
+    // 如果能够看到，那么直接使用即可
+    // 如果看不到新层级上的指针，即新层级上是 nullptr, 会立即下降到下一层
+    // 总之，在写入的同时并发读是安全的，不需要锁
     max_height_.store(height, std::memory_order_relaxed);
   }
 
@@ -360,11 +434,14 @@ void SkipList<Key, Comparator>::Insert(const Key& key) {
   for (int i = 0; i < height; i++) {
     // NoBarrier_SetNext() suffices since we will add a barrier when
     // we publish a pointer to "x" in prev[i].
+    // 新节点 x 此时还没有加入链表，无法被访问到，所以在无锁的情况下 SetNext 是安全的
     x->NoBarrier_SetNext(i, prev[i]->NoBarrier_Next(i));
+    // 把 x 加入到链表中就需要锁了
     prev[i]->SetNext(i, x);
   }
 }
 
+// 判断跳表中是否包含指定 key
 template <typename Key, class Comparator>
 bool SkipList<Key, Comparator>::Contains(const Key& key) const {
   Node* x = FindGreaterOrEqual(key, nullptr);

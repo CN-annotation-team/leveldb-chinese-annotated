@@ -37,13 +37,13 @@ struct TableBuilder::Rep {
 
   Options options;
   Options index_block_options;
-  WritableFile* file;
-  uint64_t offset;
+  WritableFile* file; // sstable 文件
+  uint64_t offset;  // 下一个写入 DataBblock 在 sstable 文件中的 offset
   Status status;
-  BlockBuilder data_block;
-  BlockBuilder index_block;
-  std::string last_key;
-  int64_t num_entries;
+  BlockBuilder data_block; // 正在构建中的 DataBlock
+  BlockBuilder index_block; // 当前 sstable 的 IndexBlock
+  std::string last_key; // 当前 DataBlock 最后一个 key
+  int64_t num_entries; // 当前 DataBlock 中键值对的个数
   bool closed;  // Either Finish() or Abandon() has been called.
   FilterBlockBuilder* filter_block;
 
@@ -56,10 +56,16 @@ struct TableBuilder::Rep {
   // blocks.
   //
   // Invariant: r->pending_index_entry is true only if data_block is empty.
+  // 直到遇到下一个 DataBlock 的第一个 key 时，我们才为上一个 DataBlock 生成 index entry, 这样我们可以为 index 使用较短的key
+  // 比如上一个 DataBlock 最后一个 key 是 "the quick brown fox", 下一个 data block的第一个key是"the who"
+  // 我们就可以用一个较短的字符串"the r" 作为上一个 DataBlock 的 index entry 的 key。
+  // 
+  // pending_index_entry 当且仅当上一个 DataBlock 写入完毕但 index entry 尚未写入时为 true
+  // 当 pending_handle == true 时，pending_handle 字段储存了即将写入 index 的 DataBlock 的指针
   bool pending_index_entry;
-  BlockHandle pending_handle;  // Handle to add to index block
+  BlockHandle pending_handle;  // Handle to add to index block 
 
-  std::string compressed_output;
+  std::string compressed_output; // 压缩时用的输出缓冲区
 };
 
 TableBuilder::TableBuilder(const Options& options, WritableFile* file)
@@ -93,14 +99,20 @@ Status TableBuilder::ChangeOptions(const Options& options) {
 
 void TableBuilder::Add(const Slice& key, const Slice& value) {
   Rep* r = rep_;
-  assert(!r->closed);
-  if (!ok()) return;
-  if (r->num_entries > 0) {
+  assert(!r->closed); // 没有调用过 Finish() 或 Abanbon()
+  if (!ok()) return; // 状态正常
+  if (r->num_entries > 0) { // key 大于上一个 key
     assert(r->options.comparator->Compare(key, Slice(r->last_key)) > 0);
   }
 
   if (r->pending_index_entry) {
+    // 上一个 DataBlock 写入完成但还未写入 index entry, 在写入新的键值对之前先把 index entry 补上
+    // 可以参考 Rep::pending_index_entry 字段注释了解具体机制
     assert(r->data_block.empty());
+    // 寻找大于 last key 且小于 key 的最短字符串，作为指向上一个 DataBlock 的索引 key
+    // 比如 last_key:"the quick brown fox" 和 key:"the who" 之间的一个 ShortestSeparator 是 "the r"
+    // last_key:"the quick brown fox" 所在的 DataBlock 的 index entry 为 "the r" -> BlockHandle to the DataBlock
+    // 在进行查询时，可以通过 IndexBlock 中的 index entry 二分查找快速找到某个 key 可能存在的 DataBlock
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
     std::string handle_encoding;
     r->pending_handle.EncodeTo(&handle_encoding);
@@ -122,15 +134,19 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   }
 }
 
+// 将缓存中的 DataBlock 刷新到磁盘, 此后的加入的键值对会存入新的 DataBlock 中
 void TableBuilder::Flush() {
   Rep* r = rep_;
   assert(!r->closed);
   if (!ok()) return;
   if (r->data_block.empty()) return;
   assert(!r->pending_index_entry);
+  // 将 data_block 写入文件，data_block 的指针会被存入 pending_handle 中
   WriteBlock(&r->data_block, &r->pending_handle);
   if (ok()) {
-    r->pending_index_entry = true;
+    // pending_index_entry = true 标记 data_block 已经写入
+    // 但是 index_entry 的 key 要在添加下个 key 的时候才能确定
+    r->pending_index_entry = true; 
     r->status = r->file->Flush();
   }
   if (r->filter_block != nullptr) {
@@ -138,6 +154,8 @@ void TableBuilder::Flush() {
   }
 }
 
+// 写入一个 Block, 并将它的指针存储在 *handle 中
+// 可能进行压缩，具体的写入过程在 WriteRawBlock 中
 void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   // File format contains a sequence of blocks where each block has:
   //    block_data: uint8[n]
@@ -189,13 +207,16 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   block->Reset();
 }
 
+// 实际写入 Block 的代码
 void TableBuilder::WriteRawBlock(const Slice& block_contents,
                                  CompressionType type, BlockHandle* handle) {
   Rep* r = rep_;
+  // 将 block 指针存入 handle 中
   handle->set_offset(r->offset);
   handle->set_size(block_contents.size());
   r->status = r->file->Append(block_contents);
   if (r->status.ok()) {
+    // 添加 block data 之后的 type 和 crc 字段
     char trailer[kBlockTrailerSize];
     trailer[0] = type;
     uint32_t crc = crc32c::Value(block_contents.data(), block_contents.size());

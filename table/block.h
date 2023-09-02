@@ -26,11 +26,13 @@ class Block {
   ~Block();
 
   size_t size() const { return size_; }
+  // 主要的查找逻辑在 iterator 中实现
   Iterator* NewIterator(const Comparator* comparator);
 
  private:
   class Iter;
 
+  // 解析 content 获得重启点的个数
   uint32_t NumRestarts() const;
 
   const char* data_;

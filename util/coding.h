@@ -105,10 +105,12 @@ inline uint64_t DecodeFixed64(const char* ptr) {
 // Internal routine for use by fallback path of GetVarint32Ptr
 const char* GetVarint32PtrFallback(const char* p, const char* limit,
                                    uint32_t* value);
+// 将 [p, limit) 之间的字节按照 varint32 解码，解码出的数字存入 *value, 返回指向varint 编码结束后第一个字节的指针
 inline const char* GetVarint32Ptr(const char* p, const char* limit,
                                   uint32_t* value) {
   if (p < limit) {
     uint32_t result = *(reinterpret_cast<const uint8_t*>(p));
+    // result & 128 == 0 表明 varint 编码只有 1 个字节
     if ((result & 128) == 0) {
       *value = result;
       return p + 1;

@@ -24,47 +24,59 @@
 
 namespace leveldb {
 
+// Slice 是 leveldb 中的字符串类型（或者叫 bytes）
 class LEVELDB_EXPORT Slice {
  public:
   // Create an empty slice.
+  // 创建空字符串
   Slice() : data_(""), size_(0) {}
 
   // Create a slice that refers to d[0,n-1].
+  // 根据 d[0,n-1] 创建一个字符串
   Slice(const char* d, size_t n) : data_(d), size_(n) {}
 
   // Create a slice that refers to the contents of "s"
+  // 根据 s 的内容创建字符串
   Slice(const std::string& s) : data_(s.data()), size_(s.size()) {}
 
   // Create a slice that refers to s[0,strlen(s)-1]
+  // 根据 s[0,strlen(s)-1] 创建字符串
   Slice(const char* s) : data_(s), size_(strlen(s)) {}
 
   // Intentionally copyable.
+  // 表明 Slice 可以复制
   Slice(const Slice&) = default;
   Slice& operator=(const Slice&) = default;
 
   // Return a pointer to the beginning of the referenced data
+  // 返回指向数据开头的指针
   const char* data() const { return data_; }
 
   // Return the length (in bytes) of the referenced data
+  // 返回 Slice 的长度(单位为字节)
   size_t size() const { return size_; }
 
   // Return true iff the length of the referenced data is zero
+  // 判断 Slice 为啥为空
   bool empty() const { return size_ == 0; }
 
   // Return the ith byte in the referenced data.
   // REQUIRES: n < size()
+  // 返回指定下标处的字节
   char operator[](size_t n) const {
     assert(n < size());
     return data_[n];
   }
 
   // Change this slice to refer to an empty array
+  // 清空 Slice
   void clear() {
     data_ = "";
     size_ = 0;
   }
 
   // Drop the first "n" bytes from this slice.
+  // 删除前 n 个字节
   void remove_prefix(size_t n) {
     assert(n <= size());
     data_ += n;
@@ -72,6 +84,7 @@ class LEVELDB_EXPORT Slice {
   }
 
   // Return a string that contains the copy of the referenced data.
+  // 将数据拷贝到 std::string 中并返回
   std::string ToString() const { return std::string(data_, size_); }
 
   // Three-way comparison.  Returns value:

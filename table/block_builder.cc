@@ -59,6 +59,7 @@ size_t BlockBuilder::CurrentSizeEstimate() const {
 }
 
 Slice BlockBuilder::Finish() {
+  // 在 Data Block 的结尾存储重启点的 offset 和数量，便于查找(查找代码在 block.cc)。
   // Append restart array
   for (size_t i = 0; i < restarts_.size(); i++) {
     PutFixed32(&buffer_, restarts_[i]);
@@ -75,30 +76,36 @@ void BlockBuilder::Add(const Slice& key, const Slice& value) {
   assert(buffer_.empty()  // No values yet?
          || options_->comparator->Compare(key, last_key_piece) > 0);
   size_t shared = 0;
+  // 检测上个重启点之后的键值对数量是否超出了限制
   if (counter_ < options_->block_restart_interval) {
     // See how much sharing to do with previous string
+    // 检查和上一个key有多少公共前缀可以复用
     const size_t min_length = std::min(last_key_piece.size(), key.size());
     while ((shared < min_length) && (last_key_piece[shared] == key[shared])) {
       shared++;
     }
   } else {
     // Restart compression
+    // 超出限制，当前键值对作为新的重启点
     restarts_.push_back(buffer_.size());
     counter_ = 0;
   }
   const size_t non_shared = key.size() - shared;
 
+  // 向 buffer 写入当前键值对的 shared_bytes, non_shared_bytes, value_size 三个字段
   // Add "<shared><non_shared><value_size>" to buffer_
   PutVarint32(&buffer_, shared);
   PutVarint32(&buffer_, non_shared);
   PutVarint32(&buffer_, value.size());
 
+  // 写入 key_delta 和 value
   // Add string delta to buffer_ followed by value
   buffer_.append(key.data() + shared, non_shared);
   buffer_.append(value.data(), value.size());
 
+  // 更新统计信息
   // Update state
-  last_key_.resize(shared);
+  last_key_.resize(shared); // 更新 last_key_ 便于复用
   last_key_.append(key.data() + shared, non_shared);
   assert(Slice(last_key_) == key);
   counter_++;

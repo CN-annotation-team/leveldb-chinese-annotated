@@ -80,24 +80,24 @@ TwoLevelIterator::TwoLevelIterator(Iterator* index_iter,
 TwoLevelIterator::~TwoLevelIterator() = default;
 
 void TwoLevelIterator::Seek(const Slice& target) {
-  index_iter_.Seek(target);
-  InitDataBlock();
-  if (data_iter_.iter() != nullptr) data_iter_.Seek(target);
-  SkipEmptyDataBlocksForward();
+  index_iter_.Seek(target); // 寻找对应的 data block
+  InitDataBlock(); // 打开对应的 block 的 iter
+  if (data_iter_.iter() != nullptr) data_iter_.Seek(target); // 在 DataBlock 中寻找 key
+  SkipEmptyDataBlocksForward();  // 跳到下一个非空 DataBlock
 }
 
 void TwoLevelIterator::SeekToFirst() {
-  index_iter_.SeekToFirst();
-  InitDataBlock();
-  if (data_iter_.iter() != nullptr) data_iter_.SeekToFirst();
-  SkipEmptyDataBlocksForward();
+  index_iter_.SeekToFirst(); // 寻找第一个 data block
+  InitDataBlock(); // 打开对应的 block 的 iter
+  if (data_iter_.iter() != nullptr) data_iter_.SeekToFirst(); // 在 DataBlock 中寻找 key
+  SkipEmptyDataBlocksForward(); // 跳到下一个非空 DataBlock
 }
 
 void TwoLevelIterator::SeekToLast() {
-  index_iter_.SeekToLast();
-  InitDataBlock();
-  if (data_iter_.iter() != nullptr) data_iter_.SeekToLast();
-  SkipEmptyDataBlocksBackward();
+  index_iter_.SeekToLast(); // 寻找对应的 data block
+  InitDataBlock(); // 打开对应的 block 的 iter
+  if (data_iter_.iter() != nullptr) data_iter_.SeekToLast(); // 在 DataBlock 中寻找 key
+  SkipEmptyDataBlocksBackward(); // 跳到下一个非空 DataBlock
 }
 
 void TwoLevelIterator::Next() {
@@ -112,6 +112,7 @@ void TwoLevelIterator::Prev() {
   SkipEmptyDataBlocksBackward();
 }
 
+// 向后(文件结尾)移动跳过空白 DataBlock
 void TwoLevelIterator::SkipEmptyDataBlocksForward() {
   while (data_iter_.iter() == nullptr || !data_iter_.Valid()) {
     // Move to next block
@@ -125,6 +126,7 @@ void TwoLevelIterator::SkipEmptyDataBlocksForward() {
   }
 }
 
+// 向前(文件开头)移动跳过空白 DataBlock
 void TwoLevelIterator::SkipEmptyDataBlocksBackward() {
   while (data_iter_.iter() == nullptr || !data_iter_.Valid()) {
     // Move to next block
@@ -143,6 +145,7 @@ void TwoLevelIterator::SetDataIterator(Iterator* data_iter) {
   data_iter_.Set(data_iter);
 }
 
+// 打开对应的 block 的 iter
 void TwoLevelIterator::InitDataBlock() {
   if (!index_iter_.Valid()) {
     SetDataIterator(nullptr);
@@ -152,6 +155,7 @@ void TwoLevelIterator::InitDataBlock() {
         handle.compare(data_block_handle_) == 0) {
       // data_iter_ is already constructed with this iterator, so
       // no need to change anything
+      // data_iter_ 已经在 target 上了，什么都不需要做
     } else {
       Iterator* iter = (*block_function_)(arg_, options_, handle);
       data_block_handle_.assign(handle.data(), handle.size());
