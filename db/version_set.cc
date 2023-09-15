@@ -467,6 +467,32 @@ bool Version::OverlapInLevel(int level, const Slice* smallest_user_key,
                                smallest_user_key, largest_user_key);
 }
 
+// 检查新 sstable 与各层 sstable 的重叠程度来决定放入哪一层
+// 决定层级的规则为：
+//     1. 尽可能往深层放
+//     2. new table 与 level0 和 level1 只要有重叠就放到 level0
+//     3. new table 与 level N (N>=2) 如果重叠部分超过阈值就放到 level N-2, 未超过阈值就放到 level N-1
+//
+// 源码中的循环次数不多，我们展开可以看的更清楚：
+//
+// if OverlapInLevel(level0) { // new_table 与 level0 的任意 table 存在重叠
+//    return level0;
+// } else if OverlapInLevel(level1) {
+//    return level0;
+// } else if OverlapInLevel(level2) {
+//    if OverlapBytesInLevel(level2) > MaxOverlapBytes { // 重叠部分超过阈值
+//        return level0;
+//    } else {
+//        return level1;
+//    }
+// } else {
+//    if OverlapBytesInLevel(level3) > MaxOverlapBytes { // 重叠部分超过阈值
+//        return level1;
+//    } else {  // 重叠部分未超过阈值
+//        return level2; 
+//    }
+// }
+//
 int Version::PickLevelForMemTableOutput(const Slice& smallest_user_key,
                                         const Slice& largest_user_key) {
   int level = 0;

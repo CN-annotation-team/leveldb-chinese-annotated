@@ -14,6 +14,7 @@
 
 namespace leveldb {
 
+// 创建 sstable 文件
 Status BuildTable(const std::string& dbname, Env* env, const Options& options,
                   TableCache* table_cache, Iterator* iter, FileMetaData* meta) {
   Status s;
@@ -22,23 +23,26 @@ Status BuildTable(const std::string& dbname, Env* env, const Options& options,
 
   std::string fname = TableFileName(dbname, meta->number);
   if (iter->Valid()) {
+    // 创建文件
     WritableFile* file;
     s = env->NewWritableFile(fname, &file);
     if (!s.ok()) {
       return s;
     }
 
+    //通过 TableBuilder 构造文件内容
     TableBuilder* builder = new TableBuilder(options, file);
-    meta->smallest.DecodeFrom(iter->key());
+    meta->smallest.DecodeFrom(iter->key()); // 将第一个 key 存入 meta
     Slice key;
     for (; iter->Valid(); iter->Next()) {
       key = iter->key();
       builder->Add(key, iter->value());
     }
     if (!key.empty()) {
-      meta->largest.DecodeFrom(key);
+      meta->largest.DecodeFrom(key); // 将最后一个 key 存入 meta
     }
 
+    // 构造完成，检查是否有错误
     // Finish and check for builder errors
     s = builder->Finish();
     if (s.ok()) {
@@ -47,6 +51,7 @@ Status BuildTable(const std::string& dbname, Env* env, const Options& options,
     }
     delete builder;
 
+    // fsync 刷一下盘
     // Finish and check for file errors
     if (s.ok()) {
       s = file->Sync();
@@ -57,6 +62,7 @@ Status BuildTable(const std::string& dbname, Env* env, const Options& options,
     delete file;
     file = nullptr;
 
+    // 各种校验
     if (s.ok()) {
       // Verify that the table is usable
       Iterator* it = table_cache->NewIterator(ReadOptions(), meta->number,

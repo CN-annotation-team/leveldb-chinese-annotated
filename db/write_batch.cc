@@ -12,6 +12,22 @@
 // varstring :=
 //    len: varint32
 //    data: uint8[len]
+// 
+// WriteBatch 会将写入操作打包，格式为：
+//    sequence: 序列号, 用于快照机制，参考 dbformat.h 中 SequenceNumber 的注释
+//    count: fixed32 写入操作的个数
+//    records: count 条待写入数据
+// Put 命令的 record 的格式为:
+//    valueType: 值为 kTypeValue(0x00)
+//    keyLength: varint32
+//    userKey:   uint8[keyLength]
+//    valueLength: varint32
+//    value: uint8[valueLength]
+// Delete 命令的 record 格式为：
+//    valueType: 值为 kTypeDelete((0x01)
+//    keyLength: varint32
+//    userKey:   uint8[keyLength]
+
 
 #include "leveldb/write_batch.h"
 

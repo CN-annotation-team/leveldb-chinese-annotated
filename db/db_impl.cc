@@ -502,13 +502,20 @@ Status DBImpl::RecoverLogFile(uint64_t log_number, bool last_log,
   return status;
 }
 
+
+// 实际负责将 immutable MemTable 持久化到 level0
+// 分三步走：
+//   1. 将 Memtable 持久化到 sstable 文件中
+//   2. 检查新 sstable 与各层 sstable 的重叠程度来决定放入哪一层
+//   3. 通过 VersionEdit 将新的 sstable 加入到数据库的 manifest 中
 Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
                                 Version* base) {
   mutex_.AssertHeld();
   const uint64_t start_micros = env_->NowMicros();
+  // 第一步： 将 Memtable 写入到 sstable 文件中
   FileMetaData meta;
   meta.number = versions_->NewFileNumber();
-  pending_outputs_.insert(meta.number);
+  pending_outputs_.insert(meta.number); // 将新 table 加入到保护名单
   Iterator* iter = mem->NewIterator();
   Log(options_.info_log, "Level-0 table #%llu: started",
       (unsigned long long)meta.number);
@@ -516,7 +523,9 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   Status s;
   {
     mutex_.Unlock();
-    s = BuildTable(dbname_, env_, options_, table_cache_, iter, &meta);
+    // 以 immutable MemTable 的 iter 作为数据源， 将数据持久化到 level0 
+    // 由于要持久化的 MemTable 已经是不可变状态，所以不需要加锁了
+    s = BuildTable(dbname_, env_, options_, table_cache_, iter, &meta); 
     mutex_.Lock();
   }
 
@@ -530,11 +539,13 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   // should not be added to the manifest.
   int level = 0;
   if (s.ok() && meta.file_size > 0) {
+    // 第二步：检查新 sstable 与各层 sstable 的重叠程度来决定放入哪一层
     const Slice min_user_key = meta.smallest.user_key();
     const Slice max_user_key = meta.largest.user_key();
     if (base != nullptr) {
       level = base->PickLevelForMemTableOutput(min_user_key, max_user_key);
     }
+    // 第三步：通过 VersionEdit 将新的 sstable 加入到数据库的 manifest 中
     edit->AddFile(level, meta.number, meta.file_size, meta.smallest,
                   meta.largest);
   }
@@ -546,11 +557,13 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   return s;
 }
 
+// 进行 Minor Compaction， 即将 immutable Memtable 持久化到 level0
 void DBImpl::CompactMemTable() {
   mutex_.AssertHeld();
   assert(imm_ != nullptr);
 
   // Save the contents of the memtable as a new Table
+  // 在 Version 
   VersionEdit edit;
   Version* base = versions_->current();
   base->Ref();
@@ -659,18 +672,23 @@ void DBImpl::RecordBackgroundError(const Status& s) {
   }
 }
 
+// 触发 compaction 操作
 void DBImpl::MaybeScheduleCompaction() {
   mutex_.AssertHeld();
   if (background_compaction_scheduled_) {
+    // 已经有 compaction 在运行了，什么都不做
     // Already scheduled
   } else if (shutting_down_.load(std::memory_order_acquire)) {
+    // db 已经关闭
     // DB is being deleted; no more background compactions
   } else if (!bg_error_.ok()) {
+    // 后台线程遇到错误，什么都不做
     // Already got an error; no more changes
   } else if (imm_ == nullptr && manual_compaction_ == nullptr &&
              !versions_->NeedsCompaction()) {
     // No work to be done
   } else {
+    // 设置 background_compaction_scheduled_ ，并将 BGWork 函数加入到任务队列中
     background_compaction_scheduled_ = true;
     env_->Schedule(&DBImpl::BGWork, this);
   }
@@ -1197,29 +1215,39 @@ Status DBImpl::Delete(const WriteOptions& options, const Slice& key) {
   return DB::Delete(options, key);
 }
 
+// 写入一个 WriteBatch
 Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
   Writer w(&mutex_);
   w.batch = updates;
   w.sync = options.sync;
   w.done = false;
 
-  MutexLock l(&mutex_);
-  writers_.push_back(&w);
+  // 每个写线程会将代表的自己的 writer 加入队列，
+  // 当上一个写线程执行完成时会唤醒队列中第一个 writer 线程, 被唤醒的线程会将队列中**所有**等待写入的数据写进数据库，
+  // 然后将已写入的 writer 的 done 置为 true 并唤醒对应的线程，被其它线程完成了写入的 writer 会立即返回
+  //
+  // 这种机制将小批量聚合为大批量，在 leveldb 这种写入固定成本很大、批量写入性能远高于单条写入的场景下对性能有很大提升
+  MutexLock l(&mutex_); 
+  writers_.push_back(&w);  // 将自己的 writer 加入到队列
   while (!w.done && &w != writers_.front()) {
-    w.cv.Wait();
+    w.cv.Wait(); 
   }
-  if (w.done) {
+  if (w.done) { // 已被其它线程写入，直接返回
     return w.status;
   }
 
+  // 被唤醒负责写入工作
+
   // May temporarily unlock and wait.
+  // 循环等待直至数据库状态允许写入
   Status status = MakeRoomForWrite(updates == nullptr);
   uint64_t last_sequence = versions_->LastSequence();
   Writer* last_writer = &w;
   if (status.ok() && updates != nullptr) {  // nullptr batch is for compactions
+    // 将 last_sequence + 1 写入至 write_batch.rep_ 的前 8 个字节
     WriteBatch* write_batch = BuildBatchGroup(&last_writer);
     WriteBatchInternal::SetSequence(write_batch, last_sequence + 1);
-    last_sequence += WriteBatchInternal::Count(write_batch);
+    last_sequence += WriteBatchInternal::Count(write_batch); 
 
     // Add to log and apply to memtable.  We can release the lock
     // during this phase since &w is currently responsible for logging
@@ -1227,6 +1255,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
     // into mem_.
     {
       mutex_.Unlock();
+      // 第一步：写入 WAL 日志
       status = log_->AddRecord(WriteBatchInternal::Contents(write_batch));
       bool sync_error = false;
       if (status.ok() && options.sync) {
@@ -1235,6 +1264,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
           sync_error = true;
         }
       }
+      // 第二步：写入 MemTable
       if (status.ok()) {
         status = WriteBatchInternal::InsertInto(write_batch, mem_);
       }
@@ -1248,9 +1278,11 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
     }
     if (write_batch == tmp_batch_) tmp_batch_->Clear();
 
+    // 第三步：更新 last_sequence
     versions_->SetLastSequence(last_sequence);
   }
 
+  // 写入完成，唤醒前面所有 writer
   while (true) {
     Writer* ready = writers_.front();
     writers_.pop_front();
@@ -1261,7 +1293,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
     }
     if (ready == last_writer) break;
   }
-
+  // 唤醒下一个 writer 准备下次写入
   // Notify new head of write queue
   if (!writers_.empty()) {
     writers_.front()->cv.Signal();
@@ -1322,6 +1354,17 @@ WriteBatch* DBImpl::BuildBatchGroup(Writer** last_writer) {
 
 // REQUIRES: mutex_ is held
 // REQUIRES: this thread is currently at the front of the writer queue
+// 
+// 进行写入前检查, 若当前数据库状态不适合写入则会循环等待直至可以写入（等待后台 compaction 完成就可以写入了）
+// MakeRoomForWrite 返回时 Memtable 一定有空间，且 level 0 的 sstable 极大概率小于 8 
+// 要求: 当前线程持有 mutex_ 且是写入队列的第一个
+// 
+// 检查的内容包括：
+//   1. 检查 level0 的 sstable 数量是否达到了 kL0_SlowdownWritesTrigger (默认为8)， 如果是则 sleep 1ms 以减慢写入速度，给 compaction 留下时间
+//   2. 检查 mutable MemTable 是否达到了最大值 （write_buffer_size，默认4MB）, 如果未达到直接写入 Memtable
+//   3. 若 Memtable 已经达到最大值，且 immutable Memtable 尚未持久化，则等待 compaction 完成
+//   4. 检查 level0 的 sstable 数量是否达到了 kL0_StopWritesTrigger (默认为12)， 如果是则等待 compaction 完成
+//   5. 若 Memtable 已经达到最大值，且没有 immutable Memtable 则将当前 Memtable 转变为 immutable， 创建一个新的 mutable Memtable，并触发一次 minor compaction
 Status DBImpl::MakeRoomForWrite(bool force) {
   mutex_.AssertHeld();
   assert(!writers_.empty());
@@ -1334,6 +1377,10 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       break;
     } else if (allow_delay && versions_->NumLevelFiles(0) >=
                                   config::kL0_SlowdownWritesTrigger) {
+      // 检查 level0 的 sstable 数量是否达到了 kL0_SlowdownWritesTrigger (默认为8)， 如果是则 sleep 1ms 以减慢写入速度，给 compaction 留下时间
+      // level0 有 4 个 sstable 时开始 compaction, 当有 8 个 sstable 时则会减慢写入速度，当有 12 个 sstable 时则必须停下来等待 compaction 完成
+      // 我们认为多次写入延迟 1ms 比单次写入延迟几秒要好，这样不仅使写入耗时比较稳定，也可以让出部分 CPU 给 compaction 使用
+      // 
       // We are getting close to hitting a hard limit on the number of
       // L0 files.  Rather than delaying a single write by several
       // seconds when we hit the hard limit, start delaying each
@@ -1342,23 +1389,31 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       // case it is sharing the same core as the writer.
       mutex_.Unlock();
       env_->SleepForMicroseconds(1000);
-      allow_delay = false;  // Do not delay a single write more than once
+      allow_delay = false;  // Do not delay a single write more than once 最多等待一次
       mutex_.Lock();
     } else if (!force &&
                (mem_->ApproximateMemoryUsage() <= options_.write_buffer_size)) {
+      // 如果 Memtable 中仍有空间，允许写入
       // There is room in current memtable
       break;
     } else if (imm_ != nullptr) {
+      // 当前 Memtable 已满且上一个 memtable 尚未存盘，等待 compaction 完成
       // We have filled up the current memtable, but the previous
       // one is still being compacted, so we wait.
       Log(options_.info_log, "Current memtable full; waiting...\n");
       background_work_finished_signal_.Wait();
     } else if (versions_->NumLevelFiles(0) >= config::kL0_StopWritesTrigger) {
+      // level0 的 sstable 数量达到了 kL0_StopWritesTrigger (默认为12)，等待 compaction 完成
       // There are too many level-0 files.
       Log(options_.info_log, "Too many L0 files; waiting...\n");
       background_work_finished_signal_.Wait();
     } else {
+      // Memtable 已经达到最大值，且没有 immutable Memtable 则将当前 Memtable 
+      // 转变为 immutable, 创建一个新的 mutable Memtable，并触发一次 minor compaction
+      // 
       // Attempt to switch to a new memtable and trigger compaction of old
+
+      // 创建一个新的 WAL 日志
       assert(versions_->PrevLogNumber() == 0);
       uint64_t new_log_number = versions_->NewFileNumber();
       WritableFile* lfile = nullptr;
@@ -1387,7 +1442,10 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       logfile_ = lfile;
       logfile_number_ = new_log_number;
       log_ = new log::Writer(lfile);
-      imm_ = mem_;
+
+      // 将当前 Memtable 置为 immutable, 并创建一个新的 mutable MemTable
+      // 由于随后 mem_ 会指向新的 MemTable，由 mem_ 引用变为了 imm_ 引用，引用计数不变， 不需要调用 Unref
+      imm_ = mem_; 
       has_imm_.store(true, std::memory_order_release);
       mem_ = new MemTable(internal_comparator_);
       mem_->Ref();
