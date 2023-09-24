@@ -85,7 +85,7 @@ DataBlock 中一个键值对的格式如下：
 
 第一行是一个重启点
 第二行复用了上一条记录的两个字节 "ab" 前缀，加上自己的 key_delta: "d", 这条记录的 key 是 "abd"  
-第二行复用了上一条记录的 3 个字节 "abd" 前缀，加上自己的 key_delta: "ef", 这条记录的 key 是 "abdef" 
+第三行复用了上一条记录的 3 个字节 "abd" 前缀，加上自己的 key_delta: "ef", 这条记录的 key 是 "abdef" 
 
 DataBlock 的结尾部分存储了其中每个重启点的 offset，在查找某个 key 时可以采用二分查找的方法搜索最近的重启点，然后向后遍历寻找目标。
 
@@ -132,8 +132,32 @@ Index Block:                                       |    |   |
 
 ## MetaIndex 
 
-MetaIndex 块中以键值对的格式存储了所有 Meta Block 的位置，key 为 Meta Block 的名字，value 为 Block Handle. 目前的 Meta Block 主要是各种 Filter，它们的名字为 `filter.
+MetaIndex 块中以键值对的格式存储了所有 Meta Block 的位置，key 为 Meta Block 的名字，value 为 Block Handle. 
+
+目前的 Meta Block 只有一条指向 Filter Block 的记录，它的key为 `filter.`
 ## Filter Block
 
 如果在打开数据库时指定了 FilterPolicy 则在 table 文件中会产生相应的 filter 块，比如最经典的 BloomFilter。在执行查询时可以根据 BloomFilter 迅速判断 table 中是否包含某个 key.
 
+filter_block.cc 文件负责
+
+
+```
+    +--------------------+
+    |   Bloom Filter 1   | <-----+
+    +--------------------+       |
+    |   Bloom Filter 2   | <-----|---+
+    +--------------------+       |   |
+    |   Bloom Filter 3   | <-----|---|---+
+    +--------------------+       |   |   |
++-> |      Offset 1      | ------+   |   |
+|   +--------------------+           |   |
+|   |      Offset 2      | ----------+   |
+|   +--------------------+               |
+|   |      Offset 3      | --------------+
+|   +--------------------+
++-  |   Array Offset     |
+    +--------------------+
+    |   kFilterBaseLg    |
+    +--------------------+
+```

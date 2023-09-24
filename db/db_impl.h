@@ -184,7 +184,8 @@ class DBImpl : public DB {
   uint32_t seed_ GUARDED_BY(mutex_);  // For sampling.
 
   // Queue of writers.
-  std::deque<Writer*> writers_ GUARDED_BY(mutex_); // 等待写入的任务队列
+  // writers_ 负责写入操作的并发控制，具体请看 DBImpl::Write() 函数
+  std::deque<Writer*> writers_ GUARDED_BY(mutex_); 
   WriteBatch* tmp_batch_ GUARDED_BY(mutex_);
 
   SnapshotList snapshots_ GUARDED_BY(mutex_);

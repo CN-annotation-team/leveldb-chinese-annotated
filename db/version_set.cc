@@ -520,6 +520,7 @@ int Version::PickLevelForMemTableOutput(const Slice& smallest_user_key,
   return level;
 }
 
+// 计算 level 层中所有与 [begin,end] 有交集的 table， 结果存储在 inputs 中
 // Store in "*inputs" all files in "level" that overlap [begin,end]
 void Version::GetOverlappingInputs(int level, const InternalKey* begin,
                                    const InternalKey* end,
@@ -800,13 +801,21 @@ void VersionSet::AppendVersion(Version* v) {
   v->next_->prev_ = v;
 }
 
+// 应用 *edit 得到最新的 Version
+// 需要做四件事：
+//   1. 补全 edit 中 last_sequence_ 等数据
+//   2. 根据 current_ 和 edit 创建新的 version
+//   3. 将 edit 数据写入 manifest 文件
+//   4. 在 VersionSet 中更新 current version 信息
 Status VersionSet::LogAndApply(VersionEdit* edit, port::Mutex* mu) {
+  // 第一步： 将 WAL 日志文件编号、下一个 sstable 文件编号、最新的 SequenceNumber 等信息写入 edit
   if (edit->has_log_number_) {
     assert(edit->log_number_ >= log_number_);
     assert(edit->log_number_ < next_file_number_);
   } else {
     edit->SetLogNumber(log_number_);
   }
+
 
   if (!edit->has_prev_log_number_) {
     edit->SetPrevLogNumber(prev_log_number_);
@@ -815,19 +824,26 @@ Status VersionSet::LogAndApply(VersionEdit* edit, port::Mutex* mu) {
   edit->SetNextFile(next_file_number_);
   edit->SetLastSequence(last_sequence_);
 
+  // 第二步：在当前 Version 的基础上创建新的 Version
   Version* v = new Version(this);
   {
     Builder builder(this, current_);
     builder.Apply(edit);
     builder.SaveTo(v);
   }
-  Finalize(v);
+  Finalize(v); // Finalize 只负责计算下次 compaction 的 level 和 score
 
+  // 第三步：将 VersionEdit 持久化到 manifest 文件
   // Initialize new descriptor log file if necessary by creating
   // a temporary file that contains a snapshot of the current version.
   std::string new_manifest_file;
   Status s;
   if (descriptor_log_ == nullptr) {
+    // 打开数据库时创建一个 log 文件存储 Version 及其变更
+    // 只有在打开数据库时 descriptor_log_ 才会为空，
+    // 只有打开数据库时才会进入此分支，此时没有其他线程在等待
+    // 所以即使 WriteSnapshot 比较慢也不需要解锁 *mu
+    //
     // No reason to unlock *mu here since we only hit this path in the
     // first call to LogAndApply (when opening the database).
     assert(descriptor_file_ == nullptr);
@@ -835,14 +851,17 @@ Status VersionSet::LogAndApply(VersionEdit* edit, port::Mutex* mu) {
     s = env_->NewWritableFile(new_manifest_file, &descriptor_file_);
     if (s.ok()) {
       descriptor_log_ = new log::Writer(descriptor_file_);
+      // 将当前数据库的元信息快照作为一个 VersionEdit 写入 manifest 文件
       s = WriteSnapshot(descriptor_log_);
     }
   }
 
+  // 写入 manifest 文件比较耗时，暂时解开锁
   // Unlock during expensive MANIFEST log write
   {
     mu->Unlock();
 
+    // 将新的 VersionEdit 写入 manifest 文件
     // Write new record to MANIFEST log
     if (s.ok()) {
       std::string record;
@@ -856,15 +875,18 @@ Status VersionSet::LogAndApply(VersionEdit* edit, port::Mutex* mu) {
       }
     }
 
+    // 将新的 manifest 文件名写入 CURRENT 文件
     // If we just created a new descriptor file, install it by writing a
     // new CURRENT file that points to it.
     if (s.ok() && !new_manifest_file.empty()) {
       s = SetCurrentFile(env_, dbname_, manifest_file_number_);
     }
 
+    // 写入完成，重新加锁
     mu->Lock();
   }
 
+  // 第四步：将新版本的信息记录到 VersionSet
   // Install the new version
   if (s.ok()) {
     AppendVersion(v);
@@ -1054,6 +1076,9 @@ void VersionSet::MarkFileNumberUsed(uint64_t number) {
   }
 }
 
+// Finalize 会评估下次 compaction 的 level 和 score, 分数 < 1 说明 compaction 并不紧迫
+// level0 会用文件数除以4得到分数，其它层用总字节数除以阈值得到分数。返回分数最高的 level
+// (函数名字有点怪
 void VersionSet::Finalize(Version* v) {
   // Precomputed best level for next compaction
   int best_level = -1;
@@ -1062,6 +1087,11 @@ void VersionSet::Finalize(Version* v) {
   for (int level = 0; level < config::kNumLevels - 1; level++) {
     double score;
     if (level == 0) {
+      // level0 根据文件数评估是否要 compaction 而不像其它层那样根据总大小评估
+      // 主要原因有两个：
+      // 1. level0 的 table 比较大（4MB）, 频繁压缩开销比较大
+      // 2. level-0中的文件在每次读取时都会被合并, 因此我们希望避免出现太多小文件。（合并过程中会压缩以及删除被覆盖的 entry，所以会导致压缩后的 sstable 很小）
+      // 
       // We treat level-0 specially by bounding the number of files
       // instead of number of bytes for two reasons:
       //
@@ -1092,13 +1122,17 @@ void VersionSet::Finalize(Version* v) {
   v->compaction_score_ = best_score;
 }
 
+// 将当前数据库的元信息快照作为一个 VersionEdit 写入 manifest 文件
+//（manifest 文件使用了 WAL 日志格式）
 Status VersionSet::WriteSnapshot(log::Writer* log) {
   // TODO: Break up into multiple records to reduce memory usage on recovery?
 
+  // 保存元信息
   // Save metadata
   VersionEdit edit;
   edit.SetComparatorName(icmp_.user_comparator()->Name());
 
+  // 保存 compaction
   // Save compaction pointers
   for (int level = 0; level < config::kNumLevels; level++) {
     if (!compact_pointer_[level].empty()) {
@@ -1207,6 +1241,7 @@ int64_t VersionSet::MaxNextLevelOverlappingBytes() {
   return result;
 }
 
+// 计算 inputs 中所有文件的覆盖范围，即最小的 key 和最大的 key, 结果存储在 *smallest 和 *largest 中
 // Stores the minimal range that covers all entries in inputs in
 // *smallest, *largest.
 // REQUIRES: inputs is not empty
@@ -1242,6 +1277,27 @@ void VersionSet::GetRange2(const std::vector<FileMetaData*>& inputs1,
   GetRange(all, smallest, largest);
 }
 
+// MergingIterator 负责遍历需要被 merge 的 table 中的键值对
+// leveldb 会将 MergingIterator 输出的键值对保存在新的 table 文件中作为 merge 的结果
+// MergingIterator 有两种使用模式：
+//
+// level0: 
+//       table1             table2           table3
+//   +-------------+    +-------------+  +-------------+
+//   |    a c e    |    |    b o y    |  |    e g o    |
+//   +-------------+    +-------------+  +-------------+
+// MergingIterator 对 level0 的三个表输出顺序为：a b c e g o
+// 对于出现了多次的 e 和 o 使用 table3 中较新的 value
+// 由于 level0 中的 table 之间存在重叠部分，所以在遍历 level0 时 children 字段会保存每个 table 的迭代器
+// Next() 函数会在 children 中找到最新最小的那个键值对作为下一个元素
+// 
+// level1:
+//       table1             table2           table3
+//   +-------------+    +-------------+  +-------------+
+//   |    a c e    |    |    g i j    |  |    o p q    |
+//   +-------------+    +-------------+  +-------------+
+// MergingIterator 对 level1 的三个表输出顺序为：a c e g i j o p q
+// 其它 level 的 table 不重叠直接用 TwoLevelIterator 遍历即可
 Iterator* VersionSet::MakeInputIterator(Compaction* c) {
   ReadOptions options;
   options.verify_checksums = options_->paranoid_checks;
@@ -1255,7 +1311,7 @@ Iterator* VersionSet::MakeInputIterator(Compaction* c) {
   int num = 0;
   for (int which = 0; which < 2; which++) {
     if (!c->inputs_[which].empty()) {
-      if (c->level() + which == 0) {
+      if (c->level() + which == 0) { // level == 0 && which == 0
         const std::vector<FileMetaData*>& files = c->inputs_[which];
         for (size_t i = 0; i < files.size(); i++) {
           list[num++] = table_cache_->NewIterator(options, files[i]->number,
@@ -1275,10 +1331,15 @@ Iterator* VersionSet::MakeInputIterator(Compaction* c) {
   return result;
 }
 
+
+// 计算下次需要 compaction 的文件并保存在 inputs_ 中
+// 需要依赖 Finalize() 计算出的 compaction_score
 Compaction* VersionSet::PickCompaction() {
   Compaction* c;
   int level;
 
+  // size_compaction 的优先级比 seek_compaction 高
+  // 某一层内数据量过大触发的 compaction 称为 size_compaction, seek 文件数过多触发的 compaction 称为 seek_compaction
   // We prefer compactions triggered by too much data in a level over
   // the compactions triggered by seeks.
   const bool size_compaction = (current_->compaction_score_ >= 1);
@@ -1289,6 +1350,8 @@ Compaction* VersionSet::PickCompaction() {
     assert(level + 1 < config::kNumLevels);
     c = new Compaction(options_, level);
 
+    // compact_pointer_ 记录上次 compaction 进行到了哪个 sstable
+    // 如果 compact_pointer_ 不为空则从它记录的位置继续压缩，否则从第一个 table 开始压缩
     // Pick the first file that comes after compact_pointer_[level]
     for (size_t i = 0; i < current_->files_[level].size(); i++) {
       FileMetaData* f = current_->files_[level][i];
@@ -1313,6 +1376,10 @@ Compaction* VersionSet::PickCompaction() {
   c->input_version_ = current_;
   c->input_version_->Ref();
 
+  // level0 的文件之间是无序且相互重叠的，比如level0 有四个文件, 它们的 key range 为：
+  // 1. [c, k] 2. [a, e] 3. [i, n] 4. [o, u]
+  // 如果本次选择了将 table1 放到 level1, 那么读取 key:d 时会认为 table2 中的数据更新，造成错误
+  // 所以需要将所有与 table1 有重叠的 level0 文件都压缩掉，在本例中 table2 和 table3 应该与 table1 一起压缩
   // Files in level 0 may overlap each other, so pick up all overlapping ones
   if (level == 0) {
     InternalKey smallest, largest;
@@ -1561,6 +1628,7 @@ bool Compaction::IsBaseLevelForKey(const Slice& user_key) {
   return true;
 }
 
+// 如果目前 compact 生成的文件，会导致接下来 level + 1 与 level + 2 层 compact 压力过大，那么结束本次 compact.
 bool Compaction::ShouldStopBefore(const Slice& internal_key) {
   const VersionSet* vset = input_version_->vset_;
   // Scan to find earliest grandparent file that contains key.

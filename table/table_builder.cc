@@ -38,7 +38,7 @@ struct TableBuilder::Rep {
   Options options;
   Options index_block_options;
   WritableFile* file; // sstable 文件
-  uint64_t offset;  // 下一个写入 DataBblock 在 sstable 文件中的 offset
+  uint64_t offset;  // 下一个要写入的 DataBlock 在 sstable 文件中的 offset
   Status status;
   BlockBuilder data_block; // 正在构建中的 DataBlock
   BlockBuilder index_block; // 当前 sstable 的 IndexBlock
@@ -121,6 +121,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   }
 
   if (r->filter_block != nullptr) {
+    // 将 key 加入到 filter block 中
     r->filter_block->AddKey(key);
   }
 
@@ -144,12 +145,14 @@ void TableBuilder::Flush() {
   // 将 data_block 写入文件，data_block 的指针会被存入 pending_handle 中
   WriteBlock(&r->data_block, &r->pending_handle);
   if (ok()) {
-    // pending_index_entry = true 标记 data_block 已经写入
+    // pending_index_entry = true 说明 data_block 已经写入
     // 但是 index_entry 的 key 要在添加下个 key 的时候才能确定
     r->pending_index_entry = true; 
     r->status = r->file->Flush();
   }
   if (r->filter_block != nullptr) {
+    // 将下一个 DataBlock 的开头偏移量传给 filter builder，同时构建 filter block
+    // 第一个 DataBlock 的 FilterBuilder::StartBlock 在 TableBuilder 构造时调用
     r->filter_block->StartBlock(r->offset);
   }
 }
@@ -239,12 +242,14 @@ Status TableBuilder::Finish() {
 
   BlockHandle filter_block_handle, metaindex_block_handle, index_block_handle;
 
+  // 构建 filter block
   // Write filter block
   if (ok() && r->filter_block != nullptr) {
     WriteRawBlock(r->filter_block->Finish(), kNoCompression,
                   &filter_block_handle);
   }
 
+  // 构建 metaindex block，目前只有一条指向 FilterBlock 的记录
   // Write metaindex block
   if (ok()) {
     BlockBuilder meta_index_block(&r->options);

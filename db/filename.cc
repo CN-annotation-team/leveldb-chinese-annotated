@@ -40,6 +40,7 @@ std::string SSTTableFileName(const std::string& dbname, uint64_t number) {
   return MakeFileName(dbname, number, "sst");
 }
 
+// 生成 manifest 文件名，Descriptor 即指的 manifest 文件
 std::string DescriptorFileName(const std::string& dbname, uint64_t number) {
   assert(number > 0);
   char buf[100];
@@ -120,6 +121,8 @@ bool ParseFileName(const std::string& filename, uint64_t* number,
   return true;
 }
 
+// 将 manifest 文件名写入 CURRENT 文件
+// CURRENT 文件记录当前正在使用的 manifest 文件, 其内容为当前 manifest 文件的文件名
 Status SetCurrentFile(Env* env, const std::string& dbname,
                       uint64_t descriptor_number) {
   // Remove leading "dbname/" and add newline to manifest file name

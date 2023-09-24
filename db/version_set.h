@@ -11,6 +11,14 @@
 //
 // Version,VersionSet are thread-compatible, but require external
 // synchronization on all accesses.
+// 
+// VersionSet 负责维护各层的 sstable 信息
+// levedb 使用版本控制机制来存储 sstable 信息和 sstable 文件的变化。
+// 数据库创建的时候会创建一个初始 Version, 此后每次 compaction 都会产生一个 VersionEdit 来记录变更, Version N + Version Edit 即可得到新的 Version
+// VersionSet 中保存了数据库中所有 Version, 并且有一个 current 指针指向当前 Version
+// VersionSet 会被持久化到 manifest 文件中, manifest 文件复用了 WAL 日志的格式，其中的条目是 VersionEdit 对象通过 EncodeTo() 函数序列化后的数据
+// 
+// 所有对 Version,VersionSet 的访问都需要锁等同步措施
 
 #ifndef STORAGE_LEVELDB_DB_VERSION_SET_H_
 #define STORAGE_LEVELDB_DB_VERSION_SET_H_
@@ -57,6 +65,7 @@ bool SomeFileOverlapsRange(const InternalKeyComparator& icmp,
                            const Slice* smallest_user_key,
                            const Slice* largest_user_key);
 
+// Version 表示数据库的一个版本，Version 记录了各层的 sstable 以及 compaction 信息
 class Version {
  public:
   struct GetStats {
@@ -145,24 +154,32 @@ class Version {
   void ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
                           bool (*func)(void*, int, FileMetaData*));
 
-  VersionSet* vset_;  // VersionSet to which this Version belongs
+  // Version 所属 VersionSet 的指针
+  VersionSet* vset_;  // VersionSet to which this Version belongs 
+  // VersionSet 以链表的形式存储 Version, next_ 和 prev_ 是链表中指针
   Version* next_;     // Next version in linked list
   Version* prev_;     // Previous version in linked list
   int refs_;          // Number of live refs to this version
 
+  // 各层 sstable 的信息，FileMetaData 保存了一个 sstable 文件的元信息
   // List of files per level
   std::vector<FileMetaData*> files_[config::kNumLevels];
 
+  // 根据 Seek 过程决定的下一次 Compaction 的目标 SSTable 及其 level
   // Next file to compact based on seek stats.
   FileMetaData* file_to_compact_;
   int file_to_compact_level_;
 
+  // 下一个应该compact的level和compaction分数.  
+  // 分数 < 1 说明 compaction 并不紧迫
+  // 这些字段在Finalize()中初始化
   // Level that should be compacted next and its compaction score.
   // Score < 1 means compaction is not strictly needed.  These fields
   // are initialized by Finalize().
   double compaction_score_;
   int compaction_level_;
 };
+
 
 class VersionSet {
  public:
@@ -173,6 +190,9 @@ class VersionSet {
 
   ~VersionSet();
 
+  // 应用 *edit 得到最新的 Version, 同时将最新 Version 持久化到 manifest 文件，并在 CURRENT 文件中指向最新 Version
+  // 要求进入前持有 mutex_, 实际上在写完文件后会释放 mutex
+  // 注意禁止并发调用 LogAndApply（LogAndApply 自己不加锁，无法保证安全）
   // Apply *edit to the current version to form a new descriptor that
   // is both saved to persistent state and installed as the new
   // current version.  Will release *mu while actually writing to the file.
@@ -185,6 +205,7 @@ class VersionSet {
   Status Recover(bool* save_manifest);
 
   // Return the current version.
+  // 返回当前的 Version
   Version* current() const { return current_; }
 
   // Return the current manifest file number
@@ -368,6 +389,7 @@ class Compaction {
   Version* input_version_;
   VersionEdit edit_;
 
+  // inputs 中保存了两个链表，inputs[0] 为需要被压缩的第一层 sstable, inputs[1] 为下一层 sstable
   // Each compaction reads inputs from "level_" and "level_+1"
   std::vector<FileMetaData*> inputs_[2];  // The two sets of inputs
 

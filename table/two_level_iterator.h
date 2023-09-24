@@ -11,6 +11,21 @@ namespace leveldb {
 
 struct ReadOptions;
 
+// TwoLevelIterator 原本设计用来遍历 table, index_iter 负责遍历 IndexBlock 并返回其中 DataBlock 的指针
+// block_function 的 arg 参数接受 index_iter 返回的 DataBlock 指针并返回相应 Block 的迭代器
+// TwoLevelIterator 也被用在 merge 过程中，此时它可以抽象为遍历一个二维数组:
+// 
+//   std::array<std::array<int, 3>, 2> vec2 = {{{1, 2, 3}, {4, 5, 6}}};
+//   auto index_iter = vec2.begin(); // index_iter 负责遍历第一层
+//   while (index_iter != arr.end()) {
+//     auto data_iter = index_iter->begin(); // block_function 等价于 index_iter->begin()
+//     while (data_iter != it1->end()) { // data_iter 负责遍历第二层
+//       std::cout << *data_iter << " ";
+//       ++data_iter;
+//     }
+//     ++index_iter
+//   }
+// 
 // Return a new two level iterator.  A two-level iterator contains an
 // index iterator whose values point to a sequence of blocks where
 // each block is itself a sequence of key,value pairs.  The returned

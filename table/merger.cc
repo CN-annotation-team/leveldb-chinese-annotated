@@ -11,6 +11,9 @@
 namespace leveldb {
 
 namespace {
+
+// MergingIterator 遍历需要被 merge 的 table 中的 key
+// 具体使用方式参考 VersionSet::MakeInputIterator 中的注释
 class MergingIterator : public Iterator {
  public:
   MergingIterator(const Comparator* comparator, Iterator** children, int n)

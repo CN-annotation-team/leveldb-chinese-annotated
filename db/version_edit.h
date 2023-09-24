@@ -18,10 +18,10 @@ class VersionSet;
 struct FileMetaData {
   FileMetaData() : refs(0), allowed_seeks(1 << 30), file_size(0) {}
 
-  int refs;
+  int refs;  // 记录这个 sstable 被多少个 Version 引用
   int allowed_seeks;  // Seeks allowed until compaction
   uint64_t number;  // 文件序号，用于确定文件名
-  uint64_t file_size;    // File size in bytes
+  uint64_t file_size;    // File size in bytes; 文件大小
   InternalKey smallest;  // Smallest internal key served by table; table 中最小的 key
   InternalKey largest;   // Largest internal key served by table; table 中最大的 key
 };
@@ -57,6 +57,11 @@ class VersionEdit {
     compact_pointers_.push_back(std::make_pair(level, key));
   }
 
+  // 将新的 sstable 记录到 VersionEdit 中
+  // 要求 Version 尚未保存
+  // file 是 sstable 的序号
+  // "smallest" 和 "largest" 是 sstable 中最小和最大的 InternalKey
+  // 
   // Add the specified file at the specified number.
   // REQUIRES: This version has not been saved (see VersionSet::SaveTo)
   // REQUIRES: "smallest" and "largest" are smallest and largest keys in file
@@ -70,6 +75,7 @@ class VersionEdit {
     new_files_.push_back(std::make_pair(level, f));
   }
 
+  // 记录某个 sstable 被删除
   // Delete the specified "file" from the specified "level".
   void RemoveFile(int level, uint64_t file) {
     deleted_files_.insert(std::make_pair(level, file));
@@ -86,7 +92,7 @@ class VersionEdit {
   typedef std::set<std::pair<int, uint64_t>> DeletedFileSet;
 
   std::string comparator_;
-  uint64_t log_number_;
+  uint64_t log_number_; 
   uint64_t prev_log_number_;
   uint64_t next_file_number_;
   SequenceNumber last_sequence_;
@@ -97,8 +103,8 @@ class VersionEdit {
   bool has_last_sequence_;
 
   std::vector<std::pair<int, InternalKey>> compact_pointers_;
-  DeletedFileSet deleted_files_;
-  std::vector<std::pair<int, FileMetaData>> new_files_;
+  DeletedFileSet deleted_files_; // 本次变更被删除的 sstable 文件
+  std::vector<std::pair<int, FileMetaData>> new_files_; // 本次变更新增的 sstable 及其所在层数，new_files_[i].first 为层数
 };
 
 }  // namespace leveldb
