@@ -139,8 +139,6 @@ MetaIndex 块中以键值对的格式存储了所有 Meta Block 的位置，key 
 
 如果在打开数据库时指定了 FilterPolicy 则在 table 文件中会产生相应的 filter 块，比如最经典的 BloomFilter。在执行查询时可以根据 BloomFilter 迅速判断 table 中是否包含某个 key.
 
-filter_block.cc 文件负责
-
 
 ```
     +--------------------+
