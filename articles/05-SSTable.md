@@ -64,7 +64,7 @@ IndexBlock 以键值对的格式索引 DataBlock, key 是一个小于 DataBlock 
 
 ![](img009.png)
 
-如上图所示，指向 DataBlock2 的 index key 为 quid，quid 大于上一个 block 最后一个键 quickl，小于 DataBlock2 的第一个键 quiet。IndexBlock 中的 key 由 [InternalKeyComparator::FindShortestSeparator](../db/dbformat.cc) 函数来确定。
+如上图所示，指向 DataBlock2 的 index key 为 quid，quid 大于上一个 block 最后一个键 quickly，小于 DataBlock2 的第一个键 quiet。IndexBlock 中的 key 由 [InternalKeyComparator::FindShortestSeparator](../db/dbformat.cc) 函数来确定。
 
 ### MetaIndexBlock
 
