@@ -68,6 +68,7 @@ class LEVELDB_EXPORT TableBuilder {
   // REQUIRES: Finish(), Abandon() have not been called
   // 将缓存中的 DataBlock 刷新到磁盘，此后的加入的键值对会存入新的 DataBlock 中
   // 可以避免相邻的两个键值对在同一个 DataBlock 中
+  // Add 会自行判断是否需要 Flush, 上层一般无需自己调用 Flush
   // 在 Finish() 或 Abandon() 后不能再使用 Flush
   void Flush();
 

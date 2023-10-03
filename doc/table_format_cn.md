@@ -61,7 +61,7 @@ Data Block 由 block data、 type crc32 三部分组成。1 个字节的 type �
 
 由于 Data Block 中的 key 是有序存储的，这意味着相邻的 key 很可能拥有相同的前缀。如果能够复用前缀可以极大的减少存储空间，
 
-于是 leveldb 中定义两种存储 key 的方式用以压缩存储前缀，一种是重启点(restart point) 它们存储了完整的 key 不复用前缀；另一种普通的 key 则会复用它前面一个相邻重启点的前缀。
+于是 leveldb 中定义两种存储 key 的方式用以压缩存储前缀，一种是重启点(restart point) 它们存储了完整的 key 不复用前缀；另一种普通的 key 则会复用它前面一个 key 的前缀。
 
 DataBlock 中一个键值对的格式如下：
 
