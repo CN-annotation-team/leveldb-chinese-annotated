@@ -97,7 +97,7 @@ void MemTable::Add(SequenceNumber s, ValueType type, const Slice& key,
   char* p = EncodeVarint32(buf, internal_key_size);
   std::memcpy(p, key.data(), key_size);
   p += key_size;
-  EncodeFixed64(p, (s << 8) | type); // 计算 tag, 存储到 p 
+  EncodeFixed64(p, (s << 8) | type); // 计算 tag, 存储到 buffer
   p += 8;
   p = EncodeVarint32(p, val_size);
   std::memcpy(p, value.data(), val_size);

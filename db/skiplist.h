@@ -405,7 +405,7 @@ void SkipList<Key, Comparator>::Insert(const Key& key) {
   Node* x = FindGreaterOrEqual(key, prev);
 
   // Our data structure does not allow duplicate insertion
-  // 我们的数据结构不允许重复插入
+  // 我们的数据结构不允许重复插入，不过参数 key 中包含全局唯一的 InternalKey 所以实际上不会重复
   assert(x == nullptr || !Equal(key, x->key));
 
   int height = RandomHeight();

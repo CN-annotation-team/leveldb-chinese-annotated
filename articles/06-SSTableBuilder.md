@@ -2,9 +2,10 @@
 
 ### TableBuilder
 
-sstable 由 [TableBuilder](../table/table_builder.cc) 负责构建，其中有几个主要方法:
+sstable 由 TableBuilder 负责构建，其中有几个主要方法:
 
->  结构介绍在这里：[传送门](./05-SSTable.md#Table基本结构)
+> 结构介绍在这里：[05-SSTable](./05-SSTable.md#Table基本结构)
+> 源码传送门 [table_builder.h](../table/table_builder.h) / [table_builder.cc](../table/table_builder.cc)
 
 ```cpp
 // 创建 TableBuilder 在 *file 上构建 sstable
@@ -87,9 +88,10 @@ void TableBuilder::Flush() {
 
 ### BlockBuilder
 
-TableBuilder 的 data_block 和 index_block 字段的类型都是 [BlockBuilder](../table/block_builder.cc)类型，BlockBuilder 如其名字负责具体 Block 的构造工作。
+TableBuilder 的 data_block 和 index_block 字段的类型都是 BlockBuilder类型，BlockBuilder 如其名字负责具体 Block 的构造工作。
 
-> DataBlock 结构介绍在这里：[传送门](./05-SSTable.md#DataBlock)
+> DataBlock 结构介绍在这里：[05-SSTable](./05-SSTable.md#DataBlock)
+> 源码传送门 [block_builder.h](../table/block_builder.h) / [block_builder.cc](../table/block_builder.cc)
 
 BlockBuilder 中主要的复杂逻辑是我们在[之前](./05-SSTable.md#RestartPoints)介绍过的 restart points 机制，现在我们可以看一下具体实现。
 

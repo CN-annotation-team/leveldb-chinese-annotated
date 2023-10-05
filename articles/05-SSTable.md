@@ -1,5 +1,4 @@
 SSTable (Sorted String Table) 是负责将数据持久化存储在磁盘上的结构，本文将介绍 SSTable 的结构以及相关的源码。
-
 ## Table基本结构
 
 ![](img005.png)
