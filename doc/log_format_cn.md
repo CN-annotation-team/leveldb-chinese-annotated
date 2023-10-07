@@ -3,9 +3,7 @@ level db 的日志格式
 
 level db 日志文件由一系列 32KB 的块（Block）组成。唯一的例外是文件尾部可能包含不完整的块。
 
-每个 Block由一系列记录（Record）组成:
-
-块的结构为：
+每个 Block由一系列记录（Record）组成，它的结构为：
 
 - checksum: type 和 data 字段的 crc32 校验和，小端序
 - length: uint16 小端序
