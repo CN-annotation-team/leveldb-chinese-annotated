@@ -1224,22 +1224,37 @@ Status DBImpl::Delete(const WriteOptions& options, const Slice& key) {
 
 // 写入一个 WriteBatch
 Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
+  // Writer 在多线程间协调时代表一个线程
   Writer w(&mutex_);
   w.batch = updates;
+  // sync==true 表示写入完成后立即对 log 进行 fsync 刷盘避免丢失
   w.sync = options.sync;
   w.done = false;
 
   // 每个写线程会将代表的自己的 writer 加入队列，
   // 当上一个写线程执行完成时会唤醒队列中第一个 writer 线程, 被唤醒的线程会将队列中**所有**等待写入的数据写进数据库，
   // 然后将已写入的 writer 的 done 置为 true 并唤醒对应的线程，被其它线程完成了写入的 writer 会立即返回
-  //
+  // 这个机制的具体介绍建议去看 07-WriteProcess.md 中的详细说明
+  // 
   // 这种机制将小批量聚合为大批量，在 leveldb 这种写入固定成本很大、批量写入性能远高于单条写入的场景下对性能有很大提升
   MutexLock l(&mutex_); 
-  writers_.push_back(&w);  // 将自己的 writer 加入到队列
+  // 将代表自己线程的 writer 加入到队列
+  writers_.push_back(&w);  
+  // 如果自己不是队列中第一个 writer 则通过条件变量 w.cv 等待 w.done 变为 true
   while (!w.done && &w != writers_.front()) {
+    // 条件变量 CondVar 的 Wait 方法会暂时释放锁，然后阻塞当前线程
+    // 在 Wait 期间，其它线程可以拿到锁，并在完成操作后将等待中的线程唤醒
+    // 被唤醒的线程将重新拿回锁
     w.cv.Wait(); 
   }
-  if (w.done) { // 已被其它线程写入，直接返回
+    // 能通过 while 进入这里的线程有两种情况：
+  // 1. 自己就是队列头，需要负责写入
+  // 2. 自己的数据已被其它线程写入，直接退出就好
+  //
+  // 所有进入此处的线程都持有锁
+  if (w.done) { 
+    // 已被其它线程写入，直接返回
+    // 返回后 MutexLock 析构，自动释放锁
     return w.status;
   }
 
@@ -1251,7 +1266,8 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
   uint64_t last_sequence = versions_->LastSequence();
   Writer* last_writer = &w;
   if (status.ok() && updates != nullptr) {  // nullptr batch is for compactions
-    // 将 last_sequence + 1 写入至 write_batch.rep_ 的前 8 个字节
+    // 将队列中所有等待的 writer 打包成一个 write_batch
+    // 此时当前线程持有 mutex_, 其它线程无法入队
     WriteBatch* write_batch = BuildBatchGroup(&last_writer);
     WriteBatchInternal::SetSequence(write_batch, last_sequence + 1);
     last_sequence += WriteBatchInternal::Count(write_batch); 
@@ -1261,7 +1277,8 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
     // and protects against concurrent loggers and concurrent writes
     // into mem_.
     {
-      mutex_.Unlock();
+      // 解锁之后，在当前线程写入期间其它线程就可以将自己的 writer 入队了
+      mutex_.Unlock(); 
       // 第一步：写入 WAL 日志
       status = log_->AddRecord(WriteBatchInternal::Contents(write_batch));
       bool sync_error = false;

@@ -59,7 +59,7 @@ DataBlock 的结尾部分存储了其中每个重启点的 offset，在查找某
 
 ### IndexBlock
 
-IndexBlock 以键值对的格式索引 DataBlock, key 是一个小于 DataBlock 中第一个 key 的字符串，value 是指向 DataBlock 的 BlockHandle。IndexBlock 的内部格式与 DataBlock 完全相同，两者都使用同一个 BlockBuilder 类进行构造。
+IndexBlock 以键值对的格式索引 DataBlock, key 是一个字典序介于 DataBlock 中第一个 key 与上一个 DataBlock 最后一个 key 中间的字符串，value 是指向 DataBlock 的 BlockHandle。IndexBlock 的内部格式与 DataBlock 完全相同，两者都使用同一个 BlockBuilder 类进行构造。
 
 ![](img009.png)
 

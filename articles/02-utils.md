@@ -1,3 +1,5 @@
+# 工具类
+
 在开始正式探究 leveldb 源码之前，我们先来介绍一下 leveldb 中几个重要的工具类。
 
 ## Slice
@@ -36,7 +38,7 @@ varint 可以缩短小整数的编码长度，但是由于一个字节只能利�
 
 leveldb 的 MemTable 和 SSTable 内部使用的键为 InternalKey, InternalKey 由 UserKey、SequenceNumber、Type 三部分组成，其中 UserKey 即为用户输入的 key。
 
-SequenceNumber 为一个递增的全局 uint64 序列号，每个写事务(WriteBatch) 都会拥有一个唯一的 SequenceNumber。leveldb 读取采用快照读机制，读取前先加锁获得当前最新的序列号，然后只搜索序列号较小的键值对。这样即可屏蔽读取过程中写入的数据。
+SequenceNumber 为一个递增的全局 uint64 序列号，用于实现多版本并发控制(MVCC)。每个写事务(WriteBatch) 都会拥有一个唯一的 SequenceNumber。读事务会先获得当前的序列号然后只读取序列号更小的键值对，这样在读事务开始后的写入便不会被看到。
 
 Type 可能有两个枚举值: `enum ValueType { kTypeDeletion = 0x0, kTypeValue = 0x1 };`。 leveldb 不直接删除数据而是通过写入一条删除记录来标记某个 key 已被删除，kTypeDeletion 即表示此 key 已被删除，kTypeValue 则是正常的数据。 
 

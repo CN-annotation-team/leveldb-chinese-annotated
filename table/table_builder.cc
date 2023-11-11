@@ -107,12 +107,15 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
 
   if (r->pending_index_entry) {
     // 上一个 DataBlock 写入完成但还未写入 index entry, 在写入新的键值对之前先把 index entry 补上
-    // 可以参考 Rep::pending_index_entry 字段注释了解具体机制
-    assert(r->data_block.empty());
+    // 可以参考 Rep::pending_index_entry 字段的注释或 06-SSTableBuiler.md 了解具体机制
+    
     // 寻找大于 last key 且小于 key 的最短字符串，作为指向上一个 DataBlock 的索引 key
     // 比如 last_key:"the quick brown fox" 和 key:"the who" 之间的一个 ShortestSeparator 是 "the r"
     // last_key:"the quick brown fox" 所在的 DataBlock 的 index entry 为 "the r" -> BlockHandle to the DataBlock
     // 在进行查询时，可以通过 IndexBlock 中的 index entry 二分查找快速找到某个 key 可能存在的 DataBlock
+    
+    assert(r->data_block.empty());
+    // FindShortestSeparator 负责找到介于两个 Block 中间的字符串作为索引值, 并将它写入r->last_key
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
     std::string handle_encoding;
     r->pending_handle.EncodeTo(&handle_encoding);

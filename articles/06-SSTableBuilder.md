@@ -31,12 +31,14 @@ TableBuilder 中的数据都存储在 [TableBuilder::Rep](../table/table_builder
 
 ```cpp
 void TableBuilder::Add(const Slice& key, const Slice& value) {
-    if (r->pending_index_entry) { // 这个分支建议看完整个函数之后回头再看
-        // 上文中说过，IndexBlock 使用小于当前 DataBlock 第一个 key 且大于上一个 DataBlock 最后一个 key 的字符串作为当前 DataBlock 的索引
-        // 因此在添加下一个 DataBlock 第一个 key 时才能确定上一个 DataBlock 的索引。当上一个 DataBlock 结束时 pending_index_entry 会被置为 true, 下次调用 Add 时就会进入此分支
+    if (r->pending_index_entry) { 
+        // 这个分支建议看完整个函数之后回头再看
         
-        // FindShortestSeparator 计算出索引值，编码存入 handle_encoding
-        r->pending_handle = FindShortestSeparator(&r->last_key, key);
+        // 05-SSTable 一节中讲过，IndexBlock 使用字典序介于当前 DataBlock 第一个 key 与上一个 DataBlock 最后一个 key 中间的字符串作为当前 DataBlock 的索引。因此在添加下一个 DataBlock 第一个 key 时才能确定上一个 DataBlock 的索引。
+        // 当一个 DataBlock 结束时 pending_index_entry 会被置为 true，这样下一次调用 Add 函数写入下一个 DataBlock 第一个 entry 时就会进入这个分支，为上一个 DataBlock 构建索引。
+        
+        // FindShortestSeparator 负责找到介于两个 Block 中间的字符串作为索引值, 并将它写入 r->last_key
+        r->options.comparator->FindShortestSeparator(&r->last_key, key);
         std::string handle_encoding;
         r->pending_handle.EncodeTo(&handle_encoding);
         // 将上一个 DataBlock 的索引写入 IndexBlock

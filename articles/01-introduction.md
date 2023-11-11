@@ -1,3 +1,5 @@
+# 概述
+
 leveldb 是一个非常经典的基于 LSM 树(Log Structured-Merge Tree)实现的 KV 数据库。LSM 的核心思想是使用顺序写代替随机写，牺牲部分读取能力换取写入能力。
 
 ## 组件
