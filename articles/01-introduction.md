@@ -41,7 +41,9 @@ leveldb 的写入机制很可能导致多个 sstable 中包含同一个 Key 的�
 
 如果不进行优化，我们需要逐个 sstable 进行搜索才能找到我们需要的 key。最坏的情况是我们必须搜索每一个 sstable 才能确定要找的 key 不存在。
 
-为了解决这个问题，leveldb 将 sstable 分成多层（level）进行管理。immutable memtable 持久化产生的文件存储在 level0。当 level 0 中的文件过多时，leveldb 便会将多个 level0 的 table 合并为一个 table 放入 level1。类似地当 level1 中数据过多时，便会将若干个 level1 的 table 进行合并然后放入 level2。
+为了解决这个问题，leveldb 将 sstable 分成多层（level）进行管理。immutable memtable 持久化产生的文件存储在 level0。
+
+当 level 0 中的文件过多时，leveldb 便会将多个 level0 的 table 合并为一个 table 放入 level1。类似地当 level1 中数据过多时，便会将若干个 level1 的 table 进行合并然后放入 level2。
 
 除了 level0 之外其它层中的 sstable 是有序排列且不重叠的，在读取时每层最多需要进入一个 sstable 进行搜索。
 
