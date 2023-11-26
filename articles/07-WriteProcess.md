@@ -45,7 +45,7 @@ WriteBatch 中的键值对经过编码后存储在 string 类型的 rep_ 字段�
 
 DBImpl::Write 函数负责实际的写入工作，它的代码极其复杂我们分开来看。
 
-### writers 队列
+### writers队列
 
 leveldb 写入操作的固定开销很大，说白话就是一次写入十个 WriteBatch 的耗时远小于分十次每次写入一 WriteBatch。为了提高性能，Write 函数引入了 writers 队列将多个 WriteBatch 一次性写入。
 
@@ -106,7 +106,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
 }
 ```
 
-### 准备写入 MakeRoomForWrite
+### 准备写入MakeRoomForWrite
 
 在阅读写入代码前我们先来复习一下在概述中讨论过的 leveldb 结构：
 
@@ -177,7 +177,7 @@ OK, 虽然这代码巨长，但是并不难理解。
 
 上面代码中有个细节可能被忽视，这里单独拿出来说一下： 当新的 memtable 取代已变为 immutable 的旧 memtable 时，也会创建一个新的 WAL 文件，也就是说 WAL 日志文件和 table 是一一对应的。
 
-### Write 整体流程
+### Write整体流程
 
 现在我们就可以拼出 Write 函数的整体流程了：
 

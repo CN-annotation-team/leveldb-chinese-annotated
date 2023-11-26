@@ -41,7 +41,7 @@ leveldb 的写入机制很可能导致多个 sstable 中包含同一个 Key 的�
 
 如果不进行优化，我们需要逐个 sstable 进行搜索才能找到我们需要的 key。最坏的情况是我们必须搜索每一个 sstable 才能确定要找的 key 不存在。
 
-为了解决这个问题，leveldb 将 sstable 分成多层（level）进行管理。immutable memtable 持久化产生的文件存储在 level0。
+为了提高搜索效率，leveldb 将 sstable 分成多层（level）进行管理。immutable memtable 持久化产生的 sstable 大多会被放在 level0。
 
 当 level 0 中的文件过多时，leveldb 便会将多个 level0 的 table 合并为一个 table 放入 level1。类似地当 level1 中数据过多时，便会将若干个 level1 的 table 进行合并然后放入 level2。
 
@@ -49,8 +49,10 @@ leveldb 的写入机制很可能导致多个 sstable 中包含同一个 Key 的�
 
 ![](img002.png)
 
-如上图所示，Level0 Table1 中 key 的范围是 "ace" 到 "dog", Level0 Table2 中 key 的范围是 "boy" 到 "edge", 如果我们在 level0 中搜索 "cat" 首先要搜索 Table1, 如果 Table1 中没有找到则需要再搜索 Table2。也就是说我们需要搜索每一个 key range 中包含 "cat" 的 table。
+> 实际上 level1 不是绝对不重叠，领会精神😏
 
-如果我们在 Level1 中搜索 "cat" 只需要搜索 Table2, 因为 Level1 中 table 的 key range 不重叠，所以其它 table 的 key range 中不可能包含 "cat"。
+如上图所示，Level0 的 Table1 中 key 的范围是 "ace" 到 "dog", Table2 的范围是 "boy" 到 "edge"。 如果我们在 level0 中搜索 "boy" 首先要搜索 Table1, 如果 Table1 中没有找到则需要再搜索 Table2。也就是说我们需要搜索每一个 key range 中包含 "boy" 的 table。
+
+如果我们在 Level1 中搜索 "boy" 只需要搜索 Table2, 因为 Level1 中 table 的 key range 不重叠，所以其它 table 的 key range 中不可能包含 "cat"。
 
 为什么 Level0 中 sstable 不能避免重叠呢？因为避免重叠需要将 table 读入、合并后重新存盘，这显然是非常耗时的操作。但是由于内存有限我们必须尽快将 memtable 存盘腾出空间来给新的 memtable(实际上 memtable 持久化会阻塞写入操作)。所以 level0 采用了最快速的方法：不进行 merge 操作直接持久化 memtable。

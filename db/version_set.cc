@@ -803,8 +803,8 @@ void VersionSet::AppendVersion(Version* v) {
 
 // 应用 *edit 得到最新的 Version
 // 需要做四件事：
-//   1. 补全 edit 中 last_sequence_ 等数据
-//   2. 根据 current_ 和 edit 创建新的 version
+//   1. 补全 edit 中 last_sequence、log_number_ 等字段
+//   2. 根据 current version 和 edit 创建新的 version
 //   3. 将 edit 数据写入 manifest 文件
 //   4. 在 VersionSet 中更新 current version 信息
 Status VersionSet::LogAndApply(VersionEdit* edit, port::Mutex* mu) {

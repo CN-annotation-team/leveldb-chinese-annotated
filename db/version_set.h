@@ -246,6 +246,8 @@ class VersionSet {
 
   // Return the log file number for the log file that is currently
   // being compacted, or zero if there is no such log file.
+  // 如果有 memtable 正在持久化，返回它的 WAL 日志文件编号
+  // 没有正在进行的持久化时则返回 0
   uint64_t PrevLogNumber() const { return prev_log_number_; }
 
   // Pick level and inputs for a new compaction.
@@ -323,9 +325,13 @@ class VersionSet {
   uint64_t manifest_file_number_;
   uint64_t last_sequence_;
   uint64_t log_number_;
-  uint64_t prev_log_number_;  // 0 or backing store for memtable being compacted
+  // 0 or backing store for memtable being compacted
+  // 如果有 memtable 正在持久化，则 prev_log_number_ 中存储它的 WAL 日志文件编号
+  // 没有正在进行的持久化时则为 0
+  uint64_t prev_log_number_;  
 
   // Opened lazily
+  // 当前的 Manifest 文件及其 writer
   WritableFile* descriptor_file_;
   log::Writer* descriptor_log_;
   Version dummy_versions_;  // Head of circular doubly-linked list of versions.
