@@ -8,11 +8,10 @@ leveldb 采用写入新版本键值对覆盖旧版本的方式进行更新和删
 
 为了避免这些无用的旧版数据浪费宝贵的磁盘空间，leveldb 会采取一些措施来清除无用的数据， 在 LSM (Log Structured-Merge Tree) 模型中这种清除无用数据的操作被称为 Compaction 或者 Merge。
 
-leveldb 中有三种 compaction 算法:
+leveldb 中有两种 compaction 算法:
 
 - MinorCompaction 特指将 immutable memtable 持久化到磁盘的操作
-- MajorCompaction 是指将 sstable 合并、沉入更下层的操作，它也是 leveldb 中最为关键的流程。在源码中 MajorCompaction 也被叫做 SizeCompaction 
-- SeekCompaction 用于优化查询效率，我们会在后续说明读取流程的文章中详细介绍它。
+- MajorCompaction 是指将 sstable 合并、沉入更下层的操作，它也是 leveldb 中最为关键的流程。在源码中 MajorCompaction 也被叫做 SizeCompaction。当某个 sstable 无效读取次数太多时也会触发 MajorCompaction, 这种 compaction 被称为 Seek Compaction.
 
 除了减少磁盘空间浪费外 compaction 算法也必须要考虑如何优化读写性能，特别是读取时的性能。leveldb 采用分层的方式来管理 sstable，其主要目的便是为了提高读取效率。
 
@@ -22,7 +21,7 @@ immutable memtable 持久化产生的 sstable 主要存放在 Level0。在分析
 
 而更深层的 sstable 则是由后台线程将上一层的 sstable 合并而成，即 MajorCompaction 过程。由于 MajorCompaction 的快慢对读写的干扰较小，所以有时间整理 sstable 使得 level1 及更深层的 sstable 在层内有序排列且不重叠，在查找时每层只需要搜索一个 table 即可。
 
-> 实际上 level1 不是绝对不重叠，在 MajorCompaction 部分我们会详细讨论
+> 后面我们会看到，实际上 level1 不是绝对不重叠
 
 ## MinorCompaction
 
@@ -107,4 +106,24 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
 2. new table 与 level0 和 level1 只要有重叠就放到 level0
 3. new table 与 level N (N>=2) 如果重叠部分超过阈值就放到 level N-2, 未超过阈值就放到 level N-1。比如与 level 2 重叠超出阈值则放在 level0, 未超出则放在 level1
 
-PickLevelForMemTableOutput
+PickLevelForMemTableOutput 源码是一个不太好读懂的循环，因为循环次数不多我们将其展开更容易读懂：
+
+```cpp
+if OverlapInLevel(level0) { // new_table 与 level0 的任意 table 存在重叠
+   return level0;
+} else if OverlapInLevel(level1) {
+   return level0;
+} else if OverlapInLevel(level2) {
+   if OverlapBytesInLevel(level2) > MaxOverlapBytes { // 重叠部分超过阈值
+       return level0;
+   } else {
+       return level1;
+   }
+} else {
+   if OverlapBytesInLevel(level3) > MaxOverlapBytes { // 重叠部分超过阈值
+       return level1;
+   } else {  // 重叠部分未超过阈值
+       return level2; 
+   }
+}
+```

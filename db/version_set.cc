@@ -1277,9 +1277,9 @@ void VersionSet::GetRange2(const std::vector<FileMetaData*>& inputs1,
   GetRange(all, smallest, largest);
 }
 
-// MergingIterator 负责遍历需要被 merge 的 table 中的键值对
-// leveldb 会将 MergingIterator 输出的键值对保存在新的 table 文件中作为 merge 的结果
-// MergingIterator 有两种使用模式：
+// MergingIterator 负责遍历需要被 merge 的 table 中的键值对, 并将它们按照 InternalKeyComparator 定义的顺序输出
+// 
+// MergingIterator 有两种实现：
 //
 // level0: 
 //       table1             table2           table3
@@ -1390,7 +1390,7 @@ Compaction* VersionSet::PickCompaction() {
     current_->GetOverlappingInputs(0, &smallest, &largest, &c->inputs_[0]);
     assert(!c->inputs_[0].empty());
   }
-
+  // 找到下一层中与 c.inputs_[0] 有重合部分的文件，把它们放到 inputs_[1] 中
   SetupOtherInputs(c);
 
   return c;
@@ -1475,6 +1475,7 @@ void AddBoundaryInputs(const InternalKeyComparator& icmp,
   }
 }
 
+// 找到下一层中与 c.inputs_[0] 有重合部分的文件，把它们放到 inputs_[1] 中
 void VersionSet::SetupOtherInputs(Compaction* c) {
   const int level = c->level();
   InternalKey smallest, largest;

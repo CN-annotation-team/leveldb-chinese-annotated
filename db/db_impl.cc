@@ -671,7 +671,7 @@ void DBImpl::RecordBackgroundError(const Status& s) {
   }
 }
 
-// 触发 compaction 操作
+// 检查状态以便在必要时触发 compaction 操作
 void DBImpl::MaybeScheduleCompaction() {
   mutex_.AssertHeld();
   if (background_compaction_scheduled_) {
@@ -716,10 +716,13 @@ void DBImpl::BackgroundCall() {
   background_work_finished_signal_.SignalAll();
 }
 
+// 在后台线程执行 Compaction
+// 此函数是 MinorCompaction 和 MajorCompaction 的入口
 void DBImpl::BackgroundCompaction() {
   mutex_.AssertHeld();
 
-  if (imm_ != nullptr) {
+  if (imm_ != nullptr) { 
+    // 执行 MinorCompaction
     CompactMemTable();
     return;
   }
@@ -909,7 +912,7 @@ Status DBImpl::InstallCompactionResults(CompactionState* compact) {
   return versions_->LogAndApply(compact->compaction->edit(), &mutex_);
 }
 
-// 进行 size_compaction（Major Compaction）或 seek_compaction
+// 进行 size_compaction 或 seek_compaction
 // compact 中已经存储了需要压缩的 level 和 table 文件
 Status DBImpl::DoCompactionWork(CompactionState* compact) {
   const uint64_t start_micros = env_->NowMicros();
@@ -923,6 +926,7 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
   assert(versions_->NumLevelFiles(compact->compaction->level()) > 0);
   assert(compact->builder == nullptr);
   assert(compact->outfile == nullptr);
+  // 如果一个 entry 不是 user key 的最新版本且它的序列号小于所有快照，那么它已经不可访问，可以放心清除
   if (snapshots_.empty()) {
     compact->smallest_snapshot = versions_->LastSequence();
   } else {
@@ -930,6 +934,8 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
   }
 
   // 构造 MergingIterator 遍历被压缩的 table
+  // input 会按照 InternalKeyComparator 的顺序返回 compact.inputs_ 中的 entry
+  // 即按照 UserKey 升序，相同 UserKey 则按 SequenceNumber 降序排列
   Iterator* input = versions_->MakeInputIterator(compact->compaction);
 
   // Release mutex while we're actually doing the compaction work
@@ -940,7 +946,7 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
   ParsedInternalKey ikey;
   std::string current_user_key;
   bool has_current_user_key = false;
-  SequenceNumber last_sequence_for_key = kMaxSequenceNumber;
+  SequenceNumber last_sequence_for_key = kMaxSequenceNumber; // current_user_key 的最新序列号
   while (input->Valid() && !shutting_down_.load(std::memory_order_acquire)) {
     // 首先保存 immutable memtable
     // Prioritize immutable compaction work
@@ -957,7 +963,7 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
     }
 
     Slice key = input->key();
-    // // 如果目前 compact 生成的文件，会导致接下来 level + 1 与 level + 2 层 compact 压力过大，那么结束本次 compact.
+    //  如果目前 compact 生成的文件，会导致接下来 level + 1 与 level + 2 层 compact 压力过大，那么结束本次 compact.
     if (compact->compaction->ShouldStopBefore(key) &&
         compact->builder != nullptr) {
       status = FinishCompactionOutputFile(compact, input);
@@ -969,6 +975,7 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
     // Handle key/value, add to state, etc.
     bool drop = false;
     if (!ParseInternalKey(key, &ikey)) {
+      // input 返回的 key 无法解析
       // Do not hide error keys
       current_user_key.clear();
       has_current_user_key = false;
@@ -980,6 +987,14 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
         // First occurrence of this user key
         current_user_key.assign(ikey.user_key.data(), ikey.user_key.size());
         has_current_user_key = true;
+        // kMaxSequenceNumber 可以保证一定不会进入 last_sequence_for_key <= smallest_snapshot 分支
+        // 所以这里的代码等价于：
+        // if (!has_current_user_key || ikey.user_key != current_user_key) {
+        //     current_user_key = ikey.user_key;
+        //     last_sequence_for_key = ikey.sequence;
+        // } else if (last_sequence_for_key <= compact->smallest_snapshot) {
+        //      // ...
+        // } else if () {}
         last_sequence_for_key = kMaxSequenceNumber;
       }
 

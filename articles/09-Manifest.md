@@ -1,4 +1,4 @@
-# Manifest
+# Manifest & VersionSet
 
 manifest 这个单词意为「货物清单」，leveldb 的 manifest 文件负责保存数据库中 sstable 的元信息，包括每层 table 的路径、key range、文件大小等。
 
