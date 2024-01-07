@@ -1,246 +1,67 @@
-LevelDB is a fast key-value storage library written at Google that provides an ordered mapping from string keys to string values.
-
-> **This repository is receiving very limited maintenance. We will only review the following types of changes.**
->
-> * Fixes for critical bugs, such as data loss or memory corruption
-> * Changes absolutely needed by internally supported leveldb clients. These typically fix breakage introduced by a language/standard library/OS update
-
-[![ci](https://github.com/google/leveldb/actions/workflows/build.yml/badge.svg)](https://github.com/google/leveldb/actions/workflows/build.yml)
-
-Authors: Sanjay Ghemawat (sanjay@google.com) and Jeff Dean (jeff@google.com)
-
-# Features
-
-  * Keys and values are arbitrary byte arrays.
-  * Data is stored sorted by key.
-  * Callers can provide a custom comparison function to override the sort order.
-  * The basic operations are `Put(key,value)`, `Get(key)`, `Delete(key)`.
-  * Multiple changes can be made in one atomic batch.
-  * Users can create a transient snapshot to get a consistent view of data.
-  * Forward and backward iteration is supported over the data.
-  * Data is automatically compressed using the [Snappy compression library](https://google.github.io/snappy/), but [Zstd compression](https://facebook.github.io/zstd/) is also supported.
-  * External activity (file system operations etc.) is relayed through a virtual interface so users can customize the operating system interactions.
-
-# Documentation
-
-  [LevelDB library documentation](https://github.com/google/leveldb/blob/main/doc/index.md) is online and bundled with the source code.
-
-# Limitations
-
-  * This is not a SQL database.  It does not have a relational data model, it does not support SQL queries, and it has no support for indexes.
-  * Only a single process (possibly multi-threaded) can access a particular database at a time.
-  * There is no client-server support builtin to the library.  An application that needs such support will have to wrap their own server around the library.
-
-# Getting the Source
-
-```bash
-git clone --recurse-submodules https://github.com/google/leveldb.git
-```
-
-# Building
-
-This project supports [CMake](https://cmake.org/) out of the box.
-
-### Build for POSIX
-
-Quick start:
-
-```bash
-mkdir -p build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build .
-```
-
-### Building for Windows
-
-First generate the Visual Studio 2017 project/solution files:
-
-```cmd
-mkdir build
-cd build
-cmake -G "Visual Studio 15" ..
-```
-The default default will build for x86. For 64-bit run:
-
-```cmd
-cmake -G "Visual Studio 15 Win64" ..
-```
-
-To compile the Windows solution from the command-line:
-
-```cmd
-devenv /build Debug leveldb.sln
-```
-
-or open leveldb.sln in Visual Studio and build from within.
-
-Please see the CMake documentation and `CMakeLists.txt` for more advanced usage.
-
-# Contributing to the leveldb Project
-
-> **This repository is receiving very limited maintenance. We will only review the following types of changes.**
->
-> * Bug fixes
-> * Changes absolutely needed by internally supported leveldb clients. These typically fix breakage introduced by a language/standard library/OS update
-
-The leveldb project welcomes contributions. leveldb's primary goal is to be
-a reliable and fast key/value store. Changes that are in line with the
-features/limitations outlined above, and meet the requirements below,
-will be considered.
-
-Contribution requirements:
-
-1. **Tested platforms only**. We _generally_ will only accept changes for
-   platforms that are compiled and tested. This means POSIX (for Linux and
-   macOS) or Windows. Very small changes will sometimes be accepted, but
-   consider that more of an exception than the rule.
-
-2. **Stable API**. We strive very hard to maintain a stable API. Changes that
-   require changes for projects using leveldb _might_ be rejected without
-   sufficient benefit to the project.
-
-3. **Tests**: All changes must be accompanied by a new (or changed) test, or
-   a sufficient explanation as to why a new (or changed) test is not required.
-
-4. **Consistent Style**: This project conforms to the
-   [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
-   To ensure your changes are properly formatted please run:
-
-   ```
-   clang-format -i --style=file <file>
-   ```
-
-We are unlikely to accept contributions to the build configuration files, such
-as `CMakeLists.txt`. We are focused on maintaining a build configuration that
-allows us to test that the project works in a few supported configurations
-inside Google. We are not currently interested in supporting other requirements,
-such as different operating systems, compilers, or build systems.
-
-## Submitting a Pull Request
-
-Before any pull request will be accepted the author must first sign a
-Contributor License Agreement (CLA) at https://cla.developers.google.com/.
-
-In order to keep the commit timeline linear
-[squash](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History#Squashing-Commits)
-your changes down to a single commit and [rebase](https://git-scm.com/docs/git-rebase)
-on google/leveldb/main. This keeps the commit timeline linear and more easily sync'ed
-with the internal repository at Google. More information at GitHub's
-[About Git rebase](https://help.github.com/articles/about-git-rebase/) page.
-
-# Performance
-
-Here is a performance report (with explanations) from the run of the
-included db_bench program.  The results are somewhat noisy, but should
-be enough to get a ballpark performance estimate.
-
-## Setup
-
-We use a database with a million entries.  Each entry has a 16 byte
-key, and a 100 byte value.  Values used by the benchmark compress to
-about half their original size.
-
-    LevelDB:    version 1.1
-    Date:       Sun May  1 12:11:26 2011
-    CPU:        4 x Intel(R) Core(TM)2 Quad CPU    Q6600  @ 2.40GHz
-    CPUCache:   4096 KB
-    Keys:       16 bytes each
-    Values:     100 bytes each (50 bytes after compression)
-    Entries:    1000000
-    Raw Size:   110.6 MB (estimated)
-    File Size:  62.9 MB (estimated)
-
-## Write performance
-
-The "fill" benchmarks create a brand new database, in either
-sequential, or random order.  The "fillsync" benchmark flushes data
-from the operating system to the disk after every operation; the other
-write operations leave the data sitting in the operating system buffer
-cache for a while.  The "overwrite" benchmark does random writes that
-update existing keys in the database.
-
-    fillseq      :       1.765 micros/op;   62.7 MB/s
-    fillsync     :     268.409 micros/op;    0.4 MB/s (10000 ops)
-    fillrandom   :       2.460 micros/op;   45.0 MB/s
-    overwrite    :       2.380 micros/op;   46.5 MB/s
-
-Each "op" above corresponds to a write of a single key/value pair.
-I.e., a random write benchmark goes at approximately 400,000 writes per second.
-
-Each "fillsync" operation costs much less (0.3 millisecond)
-than a disk seek (typically 10 milliseconds).  We suspect that this is
-because the hard disk itself is buffering the update in its memory and
-responding before the data has been written to the platter.  This may
-or may not be safe based on whether or not the hard disk has enough
-power to save its memory in the event of a power failure.
-
-## Read performance
-
-We list the performance of reading sequentially in both the forward
-and reverse direction, and also the performance of a random lookup.
-Note that the database created by the benchmark is quite small.
-Therefore the report characterizes the performance of leveldb when the
-working set fits in memory.  The cost of reading a piece of data that
-is not present in the operating system buffer cache will be dominated
-by the one or two disk seeks needed to fetch the data from disk.
-Write performance will be mostly unaffected by whether or not the
-working set fits in memory.
-
-    readrandom  : 16.677 micros/op;  (approximately 60,000 reads per second)
-    readseq     :  0.476 micros/op;  232.3 MB/s
-    readreverse :  0.724 micros/op;  152.9 MB/s
-
-LevelDB compacts its underlying storage data in the background to
-improve read performance.  The results listed above were done
-immediately after a lot of random writes.  The results after
-compactions (which are usually triggered automatically) are better.
-
-    readrandom  : 11.602 micros/op;  (approximately 85,000 reads per second)
-    readseq     :  0.423 micros/op;  261.8 MB/s
-    readreverse :  0.663 micros/op;  166.9 MB/s
-
-Some of the high cost of reads comes from repeated decompression of blocks
-read from disk.  If we supply enough cache to the leveldb so it can hold the
-uncompressed blocks in memory, the read performance improves again:
-
-    readrandom  : 9.775 micros/op;  (approximately 100,000 reads per second before compaction)
-    readrandom  : 5.215 micros/op;  (approximately 190,000 reads per second after compaction)
-
-## Repository contents
-
-See [doc/index.md](doc/index.md) for more explanation. See
-[doc/impl.md](doc/impl.md) for a brief overview of the implementation.
-
-The public interface is in include/leveldb/*.h.  Callers should not include or
-rely on the details of any other header files in this package.  Those
-internal APIs may be changed without warning.
-
-Guide to header files:
-
-* **include/leveldb/db.h**: Main interface to the DB: Start here.
-
-* **include/leveldb/options.h**: Control over the behavior of an entire database,
-and also control over the behavior of individual reads and writes.
-
-* **include/leveldb/comparator.h**: Abstraction for user-specified comparison function.
-If you want just bytewise comparison of keys, you can use the default
-comparator, but clients can write their own comparator implementations if they
-want custom ordering (e.g. to handle different character encodings, etc.).
-
-* **include/leveldb/iterator.h**: Interface for iterating over data. You can get
-an iterator from a DB object.
-
-* **include/leveldb/write_batch.h**: Interface for atomically applying multiple
-updates to a database.
-
-* **include/leveldb/slice.h**: A simple module for maintaining a pointer and a
-length into some other byte array.
-
-* **include/leveldb/status.h**: Status is returned from many of the public interfaces
-and is used to report success and various kinds of errors.
-
-* **include/leveldb/env.h**:
-Abstraction of the OS environment.  A posix implementation of this interface is
-in util/env_posix.cc.
-
-* **include/leveldb/table.h, include/leveldb/table_builder.h**: Lower-level modules that most
-clients probably won't use directly.
+LevelDB 是 Google 开发的一款经典的 Key-Value 数据库。它的代码简洁优雅，非常适合作为学习数据库的阅读材料。
+
+LevelDB 使用 LSM-Tree 结构，利用硬盘顺序写远远快于随机写的特点，来实现极高的写入性能。
+
+![](./articles/overview.png)
+
+由于许多机制需要分散在各处的代码互相配合才能实现，为了便于理解我们编写了一系列文章(并画了一大堆图)进行归纳梳理，以期为读者提供一个宏观的视角：
+
+- [01-概论](./articles/01-introduction.md)
+- [02-工具类](./articles/02-utils.md)
+- [03-MemoryTable](./articles/03-MemTable.md)
+- [04-预写日志格式及读写流程](./articles/04-Log.md)
+- [05-SSTable格式](./articles/05-SSTable.md)
+- [06-SSTable构造流程](./articles/06-SSTableBuilder.md)
+- [07-写入流程](./articles/07-WriteProcess.md)
+- [08-MinorCompaction](./articles/08-MinorCompaction.md)
+- [09-元数据管理Manifest](./articles/09-Manifest.md)
+- [10-MajorCompaction](./articles/10-MajorCompaction.md)
+
+已经注释或介绍过的的源文件:
+
+|源文件|功能介绍|相关文章|
+|:-:|:-:|:-:|
+|[include/leveldb/db.h](./include/leveldb/db.h) | leveldb 对外暴露的接口 | |
+|[db/db_impl.cc](./db/db_impl.cc)| leveldb 的核心逻辑 | 从 [07-写入流程](./articles/07-WriteProcess.md) 开始， 后面的文章都与它相关|
+|[slice.h](./include/leveldb/slice.h) | 字符串类 | [02-工具类](./articles/02-utils.md) |
+|[util/coding.h](./util/coding.h)| varint 和 fixedint 等编码 | [02-工具类](./articles/02-utils.md) |
+|[arena.h](./util/arena.h) / [arena.cc](./util/arena.cc)|一种简单高效的内存管理方式| [02-工具类](./articles/02-utils.md) |
+|[memtable.h](./db/memtable.h)/[memtable.cc](./db/memtable.cc)| 内存中的有序表 | [03-MemoryTable](./articles/03-MemTable.md) | 
+|[skiplist.h](./db/skiplist.h)| MemTable 底层的跳表实现 | [03-MemoryTable](./articles/03-MemTable.md)  |
+|[log_writter.cc](./db/log_writer.cc) | 预写日志的写入 | [04-预写日志格式及读写流程](./articles/04-Log.md) |
+|[log_reader.cc](./db/log_reader.cc)| 预写日志的读取 | [04-预写日志格式及读写流程](./articles/04-Log.md) |
+| [table_builder.h](./table/table_builder.h) / [table_builder.cc](./table/table_builder.cc)| sstable 构造器 | [06-SSTable构造流程](./articles/06-SSTableBuilder.md) |
+|[block_builder.h](../table/block_builder.h) / [block_builder.cc](../table/block_builder.cc)| sstable 中块（block）的构造流程 | [06-SSTable构造流程](./articles/06-SSTableBuilder.md) |
+|[filter_block.cc](./table/filter_block.cc)| filterBlock 用于快速判断sstable中是否包含某个 key | [06-SSTable构造流程](./articles/06-SSTableBuilder.md) |
+|[WriteBatch.h](./include/write_batch.h)/[WriteBatch.cc](./db/write_batch.cc)| 写事务数据结构 | [07-写入流程](./articles/07-WriteProcess.md) |
+|[version_set.h](./db/version_set.h) / [version_set.cc](./db/version_set.cc)| 维护各层 sstable 的元数据 | [09-元数据管理Manifest](./articles/09-Manifest.md) | 
+|[version_edit.h](./db/version_edit.h) / [version_edit.cc](./db/version_edit.cc)| version_edit 是一次元数据变更 | [09-元数据管理Manifest](./articles/09-Manifest.md) | 
+
+## 关于提交 PR 的方法：
+### Step1:
+首先你需要 fork 本仓库到你自己的 github 仓库，点击右上角的 fork 按钮🎉🎉<br>
+### Step2:
+使用 git clone 命令将本仓库拷贝到你的本地文件，git clone 地址请点开项目上方的绿色 "code" 按钮查看😀😀<br>
+### Step3:
+在你的本地对代码进行一番精心修改吧！🍉🍉<br>
+### Step4:
+修改完后，是时候该上传你的改动到你 fork 来的远程仓库上了。你可以用 git bash，也可以使用 IDE 里的 git 来操作。对于 git 不熟的用户建议使用 IDE，IDE 也更方便写 commit 信息，别忘了写 commit 信息哦！当然我们只是增删改中文注释，如果要直接在 github 上编辑也可以，你可以使用最简单的在线编辑功能（预览文件的时候点击右上角的笔🖊），或者你也可以在你的仓库首页按一下句号键使用 github 提供的在线 vscode 。🤔🤔<br>
+### Step5:
+上传之后，点进你的仓库主页，会出现一个 "Contribute"，点击它，选择 "Open pull request"，选择好你仓库的分支和你想要在这里合并的分支后，点击 "Create pull request"，之后填写你的 PR 标题和正文内容，就成功提交一个 PR 啦！🍭🍭
+### Step6 (optional):
+记得检查修改自己的 GitHub Public profile 里的 Name 和 Public email，位置在右上角头像的 Settings 里，因为大多数情况下我们会使用 squash merge 来合并 PRs，此时 squash merge 后产生的新提交作者信息会使用这个 GH 信息（如果你的信息想公开的话）。
+
+## 关于提交 PR 的内容：
+
+### 修改内容：
+1. 给未有中文注释的函数添加中文注释。
+2. 修改本仓库中的文章或者添加新的文章
+3. 修改或删除意思不明确的，意思有误的，有错别字的中文注释。
+4. 修改不标准的注释格式，修改比较严重的标点错误(中文字用英文逗号、句号、括号、引号实际上不需要修改）。
+5. 给中文注释不足的函数添加注释。
+   
+### 注释格式：
+
+1. **请使用 UTF-8 编码进行注释。**
+2. 英文和中文之间要有一个空格。
+3. 注释里的文字内容与注释符号之间有一个空格

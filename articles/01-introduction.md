@@ -17,7 +17,7 @@ leveldb 是一个非常经典的基于 LSM 树(Log Structured-Merge Tree)实现�
 
 如上图所示，leveldb 中始终有一个 memtable，最多存在一个 immutable memtable，磁盘上还有若干 sstable 分层进行管理。此外会有若干个 Manifest 文件和一个 Current 文件负责维护 leveldb 的元信息，具体来说就是各个 sstable 的信息。
 
-memtable 是一个内存中的有序 map 结构，它的底层实现是一个跳表。在进行写入时，总是首先会写入 memtable，当 memtable 的大小达到阈值(4MB)时，memtable 会被转变为不可写入的 immutable memtable。随后 leveldb 的后台线程会将 immutable memtable 的内容转换为 sstable 格式持久化到磁盘上。
+memtable 是一个内存中的有序 map 结构，它的底层实现是一个跳表。在进行写入时，总是首先写入 memtable，当 memtable 的大小达到阈值(4MB)时，memtable 会被转变为不可写入的 immutable memtable。随后 leveldb 的后台线程会将 immutable memtable 的内容转换为 sstable 格式持久化到磁盘上。
 
 sstable (Sorted String Table) 是负责将键值对持久化存储在磁盘上的结构，键值对在table 文件中按照字典序有序排列，故而命名为 Sorted String。此外，sstable 中也包含了一些索引数据以便于查询。sstable 一旦创建便不可修改，不可变的设计极大地简化实现并行操作的复杂度。
 
