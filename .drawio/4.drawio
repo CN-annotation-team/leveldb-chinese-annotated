@@ -1,0 +1,46 @@
+<mxfile host="65bd71144e">
+    <diagram id="YQEeyEsAXImCTdxHAv1M" name="第 1 页">
+        <mxGraphModel dx="417" dy="514" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="67" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#E0D3C3;" vertex="1" parent="1">
+                    <mxGeometry x="267" y="111" width="308" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="68" value="&lt;font color=&quot;#02666b&quot;&gt;首先准备一大块内存&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontColor=#013E41;" vertex="1" parent="1">
+                    <mxGeometry x="157" y="128" width="81" height="29.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="73" value="&lt;font color=&quot;#02666b&quot;&gt;先分配一个 4KB 的基本块&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontColor=#013E41;" vertex="1" parent="1">
+                    <mxGeometry x="149" y="230.75" width="97" height="29.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="75" value="&lt;font color=&quot;#02666b&quot;&gt;再分配一个 16KB 的大块&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontColor=#013E41;" vertex="1" parent="1">
+                    <mxGeometry x="149" y="333.75" width="97" height="29.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="76" value="" style="group" vertex="1" connectable="0" parent="1">
+                    <mxGeometry x="267" y="214" width="308" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="70" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#E0D3C3;" vertex="1" parent="76">
+                    <mxGeometry width="308" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="79" value="4KB" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#659DA8;fontColor=default;labelBackgroundColor=none;" vertex="1" parent="76">
+                    <mxGeometry width="83" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="77" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#E0D3C3;" vertex="1" parent="1">
+                    <mxGeometry x="267" y="317" width="308" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="80" value="4KB" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#659DA8;fontColor=default;labelBackgroundColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="267" y="317" width="83" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="81" value="16KB" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#659DA8;fontColor=default;labelBackgroundColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="317" width="129" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="82" value="&lt;font color=&quot;#02666b&quot;&gt;最后一起释放&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontColor=#013E41;" vertex="1" parent="1">
+                    <mxGeometry x="157" y="437" width="97" height="29.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="83" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#F0F0F0;strokeWidth=2;dashed=1;strokeColor=#6A8FA8;" vertex="1" parent="1">
+                    <mxGeometry x="267" y="422" width="308" height="63" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

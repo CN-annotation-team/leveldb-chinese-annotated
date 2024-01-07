@@ -1,0 +1,173 @@
+<mxfile host="65bd71144e">
+    <diagram id="YQEeyEsAXImCTdxHAv1M" name="第 1 页">
+        <mxGraphModel dx="1016" dy="685" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="426" value="线程A" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="93.75" y="1999" width="96.36" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="427" value="线程B" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="220.11" y="1999" width="96.36" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="428" value="线程C" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="346.47" y="1999" width="96.36" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="429" value="线程D" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="463.83000000000004" y="1999" width="96.36" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="430" value="线程E" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="590.19" y="1999" width="96.36" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="432" value="" style="line;strokeWidth=4;direction=south;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;strokeColor=#6E4740;fillColor=#6E4740;" vertex="1" parent="1">
+                    <mxGeometry x="136.93" y="2047.32" width="10" height="213.68" as="geometry"/>
+                </mxCell>
+                <mxCell id="433" value="" style="line;strokeWidth=4;direction=south;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;strokeColor=#6E4740;fillColor=#6E4740;" vertex="1" parent="1">
+                    <mxGeometry x="263.29" y="2046" width="10" height="395" as="geometry"/>
+                </mxCell>
+                <mxCell id="434" value="" style="line;strokeWidth=4;direction=south;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;strokeColor=#6E4740;fillColor=#6E4740;" vertex="1" parent="1">
+                    <mxGeometry x="389.65" y="2046" width="10" height="394" as="geometry"/>
+                </mxCell>
+                <mxCell id="435" value="" style="line;strokeWidth=4;direction=south;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;strokeColor=#6E4740;fillColor=#6E4740;" vertex="1" parent="1">
+                    <mxGeometry x="507.01" y="2046" width="10" height="393" as="geometry"/>
+                </mxCell>
+                <mxCell id="436" value="" style="line;strokeWidth=4;direction=south;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;strokeColor=#6E4740;fillColor=#6E4740;" vertex="1" parent="1">
+                    <mxGeometry x="633.37" y="2046" width="10" height="494" as="geometry"/>
+                </mxCell>
+                <mxCell id="437" value="&lt;font color=&quot;#ff99cc&quot;&gt;线程A 到 E 是依次进入writer 队列的5个线程&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;strokeWidth=3;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="256.55" y="1941" width="430" height="56" as="geometry"/>
+                </mxCell>
+                <mxCell id="438" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#A2886D;fillColor=#A2886D;" vertex="1" parent="1">
+                    <mxGeometry x="133.9" y="2072" width="16.07" height="188" as="geometry"/>
+                </mxCell>
+                <mxCell id="439" value="① 线程A 首先进入流程，开始写入自己的数据" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="47" y="2072" width="74" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="440" value="② 线程B 进入时 A 还在写入，通过条件变量等待A 完成" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="166" y="2066" width="85.35" height="69" as="geometry"/>
+                </mxCell>
+                <mxCell id="441" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#EBCDBE;dashed=1;strokeWidth=2;" vertex="1" parent="1">
+                    <mxGeometry x="260.26" y="2110" width="16.07" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="442" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#EBCDBE;dashed=1;strokeWidth=2;gradientColor=none;glass=0;" vertex="1" parent="1">
+                    <mxGeometry x="386.61" y="2140" width="16.07" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="443" value="③ 线程C、D 同样进入等待" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="418" y="2072" width="74" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="444" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#EBCDBE;dashed=1;strokeWidth=2;" vertex="1" parent="1">
+                    <mxGeometry x="503.97" y="2178" width="16.07" height="260" as="geometry"/>
+                </mxCell>
+                <mxCell id="445" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#5E5D65;" vertex="1" parent="1">
+                    <mxGeometry x="260.26" y="2260" width="16.07" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="446" value="④ A 完成写入，通过条件变量唤醒B." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="160" y="2190" width="80" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="447" value="⑤ B 锁定 writer 队列， 并将正在排队的 B、C、D 的数据打包" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="280" y="2240" width="90" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="448" value="" style="endArrow=classic;html=1;strokeColor=#B3ADAB;strokeWidth=2;fontColor=#FF99CC;entryX=0;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="482" target="445">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="200" y="2340" as="sourcePoint"/>
+                        <mxPoint x="250" y="2290" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="449" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#EBCDBE;dashed=1;strokeWidth=2;" vertex="1" parent="1">
+                    <mxGeometry x="630.33" y="2280" width="16.07" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="454" value="⑥ 队列被B 锁定，直到 B 解锁后才能入队" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="520.34" y="2264" width="110" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="455" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#A2886D;" vertex="1" parent="1">
+                    <mxGeometry x="260.26" y="2330" width="16.07" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="456" value="⑦ B 解锁 writer 队列， 开始写入 B、C、D 的数据" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="280" y="2340" width="90" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="457" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#B3ADAB;strokeWidth=2;fontColor=#FF99CC;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="455" target="449">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="480" y="2430" as="sourcePoint"/>
+                        <mxPoint x="530" y="2380" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="458" value="⑧ 写入完成，唤醒 C、D 和 E。 线程B结束" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="285" y="2445" width="90" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="459" value="⑨ C、D 的任务已由 B 完成，直接退出&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="416" y="2445" width="78" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="460" value="⑩ E 是新的队头，被 B 唤醒后进入步骤 ⑤ 做下一个循环的写入" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF99CC;" vertex="1" parent="1">
+                    <mxGeometry x="660" y="2420" width="100" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="462" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#5E5D65;" vertex="1" parent="1">
+                    <mxGeometry x="630.3399999999999" y="2440" width="16.07" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="472" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#B3ADAB;strokeWidth=2;fontColor=#FF99CC;entryX=0.25;entryY=0;entryDx=0;entryDy=0;startArrow=none;" edge="1" parent="1" source="488" target="462">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="276" y="2440" as="sourcePoint"/>
+                        <mxPoint x="617.29" y="2439.9999999999995" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="474" value="" style="curved=1;endArrow=classic;html=1;strokeColor=#5E5D65;strokeWidth=2;fontColor=#FF99CC;entryX=0;entryY=0;entryDx=0;entryDy=0;exitX=0.25;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="462" target="445">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="360" y="2600" as="sourcePoint"/>
+                        <mxPoint x="410" y="2550" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="570" y="2560"/>
+                            <mxPoint x="160" y="2560"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="476" value="全程睡眠" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;glass=0;dashed=1;strokeColor=#CAC0B7;strokeWidth=2;fontColor=#FF99CC;fillColor=#F7EDEB;gradientColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="406.65999999999997" y="2182" width="83" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="477" value="" style="shape=flexArrow;endArrow=classic;html=1;strokeColor=none;strokeWidth=2;fontColor=#FF99CC;curved=1;exitX=0.55;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;endWidth=12.307692307692307;endSize=7.3999999999999995;width=8;fillColor=#F7EDEB;" edge="1" parent="1" source="476">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="447.01" y="2358" as="sourcePoint"/>
+                        <mxPoint x="410" y="2317" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="478" value="" style="shape=flexArrow;endArrow=classic;html=1;strokeColor=none;strokeWidth=2;fontColor=#FF99CC;curved=1;exitX=0.55;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;endWidth=12.307692307692307;endSize=7.3999999999999995;width=8;fillColor=#F7EDEB;" edge="1" parent="1" source="476">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="471.6600000000001" y="2260.7999999999997" as="sourcePoint"/>
+                        <mxPoint x="500.01" y="2294" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="479" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#5E5D65;" vertex="1" parent="1">
+                    <mxGeometry x="630.33" y="2330" width="16.07" height="23" as="geometry"/>
+                </mxCell>
+                <mxCell id="480" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#EBCDBE;dashed=1;strokeWidth=2;" vertex="1" parent="1">
+                    <mxGeometry x="630.34" y="2353" width="16.07" height="87" as="geometry"/>
+                </mxCell>
+                <mxCell id="481" value="B 释放锁之后，E 将自己加入队列，随后通过环境变量等待 B 完成写入" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;glass=0;dashed=1;strokeColor=none;strokeWidth=2;fontColor=#FF99CC;fillColor=#F7EDEB;gradientColor=none;direction=east;flipH=0;position2=0.24;" vertex="1" parent="1">
+                    <mxGeometry x="649" y="2244.5" width="156" height="91" as="geometry"/>
+                </mxCell>
+                <mxCell id="482" value="" style="line;strokeWidth=4;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;glass=0;strokeColor=#6E4740;fontColor=#FF99CC;fillColor=#6E4740;gradientColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="129.93" y="2257" width="24" height="10" as="geometry"/>
+                </mxCell>
+                <mxCell id="484" value="" style="line;strokeWidth=4;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;glass=0;strokeColor=#6E4740;fontColor=#FF99CC;fillColor=#6E4740;gradientColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="256.29" y="2435" width="24" height="10" as="geometry"/>
+                </mxCell>
+                <mxCell id="487" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#B3ADAB;strokeWidth=2;fontColor=#FF99CC;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" target="486">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="276" y="2440" as="sourcePoint"/>
+                        <mxPoint x="634.3574999999998" y="2440" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="486" value="" style="line;strokeWidth=4;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;glass=0;strokeColor=#6E4740;fontColor=#FF99CC;fillColor=#6E4740;gradientColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="382.65000000000003" y="2435" width="24" height="10" as="geometry"/>
+                </mxCell>
+                <mxCell id="489" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#B3ADAB;strokeWidth=2;fontColor=#FF99CC;entryX=0.25;entryY=0;entryDx=0;entryDy=0;startArrow=none;" edge="1" parent="1" source="486" target="488">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="406.6500000000001" y="2441.230769230769" as="sourcePoint"/>
+                        <mxPoint x="634.3574999999998" y="2440" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="488" value="" style="line;strokeWidth=4;html=1;perimeter=backbonePerimeter;points=[];outlineConnect=0;glass=0;strokeColor=#6E4740;fontColor=#FF99CC;fillColor=#6E4740;gradientColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="500.01" y="2435" width="24" height="10" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

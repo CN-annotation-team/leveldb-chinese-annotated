@@ -1,0 +1,43 @@
+<mxfile host="65bd71144e">
+    <diagram id="YQEeyEsAXImCTdxHAv1M" name="第 1 页">
+        <mxGraphModel dx="653" dy="643" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="426" value="BGWork" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="100" y="2012" width="201" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="427" value="BackgroundCall" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="100" y="2101" width="201" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="428" value="BackgroundCompaction" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="100" y="2190" width="201" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="429" value="CompactMemTable" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;container=0;strokeWidth=1;" vertex="1" parent="1">
+                    <mxGeometry x="100" y="2279" width="201" height="48.32" as="geometry"/>
+                </mxCell>
+                <mxCell id="430" value="" style="shape=flexArrow;endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fillColor=#A2886D;strokeColor=none;" edge="1" parent="1" source="426" target="427">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="327" y="2123" as="sourcePoint"/>
+                        <mxPoint x="377" y="2073" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="431" value="" style="shape=flexArrow;endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fillColor=#A2886D;strokeColor=none;" edge="1" parent="1" source="427" target="428">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="210.5" y="2070.32" as="sourcePoint"/>
+                        <mxPoint x="210.5" y="2111" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="432" value="" style="shape=flexArrow;endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fillColor=#A2886D;strokeColor=none;" edge="1" parent="1" source="428" target="429">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="210.5" y="2159.32" as="sourcePoint"/>
+                        <mxPoint x="210.5" y="2200" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="434" value="BackgroundCompaction 也是 MajorCompaction 和 SeekCompaction 的入口" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;glass=0;dashed=1;strokeColor=#CAC0B7;strokeWidth=2;fontColor=#FF99CC;fillColor=#F7EDEB;gradientColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="317" y="2128" width="252" height="110.32" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

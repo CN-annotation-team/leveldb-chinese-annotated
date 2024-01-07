@@ -1,0 +1,34 @@
+<mxfile host="65bd71144e">
+    <diagram id="YQEeyEsAXImCTdxHAv1M" name="第 1 页">
+        <mxGraphModel dx="657" dy="514" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="67" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#E0D3C3;" parent="1" vertex="1">
+                    <mxGeometry x="98" y="95" width="517" height="101" as="geometry"/>
+                </mxCell>
+                <mxCell id="80" value="Data" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#D8B29C;fontColor=default;labelBackgroundColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="127" y="117.5" width="238" height="59" as="geometry"/>
+                </mxCell>
+                <mxCell id="84" value="Type" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#8D91AA;fontColor=default;labelBackgroundColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="373" y="117.5" width="67" height="59" as="geometry"/>
+                </mxCell>
+                <mxCell id="85" value="MetaBlock" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#8D91AA;fontColor=default;labelBackgroundColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="436" y="375.5" width="134" height="59" as="geometry"/>
+                </mxCell>
+                <mxCell id="86" value="MetaIndexBlock" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#ACD4D6;fontColor=default;labelBackgroundColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="436" y="454.5" width="134" height="59" as="geometry"/>
+                </mxCell>
+                <mxCell id="87" value="IndexBlock" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#C3BAB1;fontColor=default;labelBackgroundColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="438" y="533.5" width="134" height="59" as="geometry"/>
+                </mxCell>
+                <mxCell id="88" value="Footer" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#4A475C;fontColor=default;labelBackgroundColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="438" y="612.5" width="134" height="59" as="geometry"/>
+                </mxCell>
+                <mxCell id="100" value="CRC" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#ACD4D6;fontColor=default;labelBackgroundColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="455" y="117.5" width="134" height="59" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
